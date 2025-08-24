@@ -4,7 +4,7 @@ import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
-import { Appearance, Platform, View } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 import { NAV_THEME } from '~/lib/constants';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
@@ -21,7 +21,6 @@ const DARK_THEME: Theme = {
 };
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
@@ -38,31 +37,34 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-      <Stack>
+      
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Ana ekran (app/index.tsx) */}
         <Stack.Screen
-          name='index'
+          name="index"
           options={{
             title: 'Sersim',
             headerRight: () => <ThemeToggle />,
           }}
         />
+
+        {/* ❌ sign-in ve sign-up buradan kaldırıldı */}
+        {/* Onlar zaten (auth)/_layout.tsx altında var */}
+
+        {/* Örn. login sonrası yönlendirilecek home ekranı */}
+        <Stack.Screen name="home" options={{ title: 'Ana Sayfa' }} />
       </Stack>
+
       <PortalHost />
     </ThemeProvider>
   );
 }
-
-
-
-
-
 
 const useIsomorphicLayoutEffect =
   Platform.OS === 'web' && typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
 function useSetWebBackgroundClassName() {
   useIsomorphicLayoutEffect(() => {
-    // Adds the background color to the html element to prevent white background on overscroll.
     document.documentElement.classList.add('bg-background');
   }, []);
 }

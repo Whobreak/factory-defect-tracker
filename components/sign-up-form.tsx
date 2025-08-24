@@ -1,5 +1,5 @@
-// import { SocialConnections } from '~/components/social-connections'; // eklenecek  mi karar vericez
-import { Button } from '~/components/ui/button';
+// import { SocialConnections } from '~/components/social-connections';  // eklenecek  mi karar vericez
+import { Button } from '~/components/ui/button'; 
 import {
   Card,
   CardContent,
@@ -12,10 +12,10 @@ import { Label } from '~/components/ui/label';
 import { Separator } from '~/components/ui/separator';
 import { Text } from '~/components/ui/text';
 import * as React from 'react';
-import { Pressable, type TextInput, View } from 'react-native';
-import { router } from "expo-router";
+import { Pressable, TextInput, View } from 'react-native';
+import { router } from 'expo-router';
 
-export function SignInForm() {
+export function SignUpForm() {
   const passwordInputRef = React.useRef<TextInput>(null);
 
   function onEmailSubmitEditing() {
@@ -23,26 +23,19 @@ export function SignInForm() {
   }
 
   function onSubmit() {
-    // TODO: Submit form and navigate to protected screen if successful
-    //(Swagger, Firebase vs.)
-    // şimdilik sahte başarılı login kabul edelim
-    const success = true;
-
-    if (success) {
-      // Giriş başarılı → ana sayfaya yönlendir
-        router.replace("/(main)");
-  } else {
-    console.log("Login failed");
+  const success = true; // Swagger’dan dönen response’a göre
+  if (success) {
+    router.replace("/(main)");
   }
-  }
+}
 
   return (
     <View className="gap-6">
       <Card className="border-border/0 sm:border-border shadow-none sm:shadow-sm sm:shadow-black/5">
         <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Uygulamaya giriş yapin</CardTitle>
+          <CardTitle className="text-center text-xl sm:text-left">Hesap oluştur</CardTitle>
           <CardDescription className="text-center sm:text-left">
-            Tekrar Hoşgeldiniz! Lütfen giriş yapin.
+            Hoş geldiniz! Başlamak için lütfen bilgileri doldurun.  
           </CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
@@ -51,7 +44,7 @@ export function SignInForm() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                placeholder="*****@gmail.com"
+                placeholder="m@example.com"
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -63,16 +56,6 @@ export function SignInForm() {
             <View className="gap-1.5">
               <View className="flex-row items-center">
                 <Label htmlFor="password">Şifre</Label>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="web:h-fit ml-auto h-4 px-1 py-0 sm:h-4"
-                  onPress={() => {
-                    // TODO: Navigate to forgot password screen
-                    //router.push("/forgot-password");
-                  }}>
-                  <Text className="font-normal leading-4">Şifrenizi mi unuttunuz?</Text>
-                </Button>
               </View>
               <Input
                 ref={passwordInputRef}
@@ -87,13 +70,12 @@ export function SignInForm() {
             </Button>
           </View>
           <Text className="text-center text-sm">
-            Hesabiniz yok mu?{' '}
+            Zaten hesabin var mi?{' '}
             <Pressable
               onPress={() => {
-                // TODO: Navigate to sign up screen
-                router.push("/sign-up");
+                router.push("/sign-in");
               }}>
-              <Text className="text-sm underline underline-offset-4">Kaydol</Text>
+              <Text className="text-sm underline underline-offset-4">Giriş yap</Text>
             </Pressable>
           </Text>
           {/* <View className="flex-row items-center">
