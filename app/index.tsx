@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { View,ScrollView } from 'react-native';
 import Animated, { FadeInUp, FadeOutDown, LayoutAnimationConfig } from 'react-native-reanimated';
 import { Info } from '~/lib/icons/Info';
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar';
@@ -15,9 +15,13 @@ import {
 import { Progress } from '~/components/ui/progress';
 import { Text } from '~/components/ui/text';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
+import { SignInForm } from '~/components/sign-in-form';
+
 
 const GITHUB_AVATAR_URI =
   'https://i.pinimg.com/originals/ef/a2/8d/efa28d18a04e7fa40ed49eeb0ab660db.jpg';
+ 
+ 
 
 export default function Screen() {
   const [progress, setProgress] = React.useState(78);
@@ -27,7 +31,16 @@ export default function Screen() {
   }
   return (
     <View className='flex-1 justify-center items-center gap-5 p-6 bg-secondary/30'>
-      <Card className='w-full max-w-sm p-6 rounded-2xl'>
+      <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerClassName="sm:flex-1 items-center justify-center p-4 py-8 sm:py-4 sm:p-6 mt-safe"
+      keyboardDismissMode="interactive">
+      <View className="w-full max-w-sm">
+        <SignInForm />
+      </View>
+    </ScrollView>
+           
+      {/* <Card className='w-full max-w-sm p-6 rounded-2xl'>
         <CardHeader className='items-center'>
           <Avatar alt="Rick Sanchez's Avatar" className='w-24 h-24'>
             <AvatarImage source={{ uri: GITHUB_AVATAR_URI }} />
@@ -36,7 +49,7 @@ export default function Screen() {
             </AvatarFallback>
           </Avatar>
           <View className='p-3' />
-          <CardTitle className='pb-2 text-center'>Rick Sanchez</CardTitle>
+          <CardTitle className='pb-2 text-center'>Rick Sancddddhez</CardTitle>
           <View className='flex-row'>
             <CardDescription className='text-base font-semibold'>Scientist</CardDescription>
             <Tooltip delayDuration={150}>
@@ -89,7 +102,9 @@ export default function Screen() {
             <Text>Update</Text>
           </Button>
         </CardFooter>
-      </Card>
+        
+      </Card> */}
+      
     </View>
   );
 }
