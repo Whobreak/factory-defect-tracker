@@ -5,7 +5,7 @@ const isLoggedIn = false; // şimdilik sahte kontrol
 
 export default function Index() {
   if (isLoggedIn) {
-    return <Redirect href="/(main)" />;
+    return <Redirect href="/home" />;
   } else {
     return <Redirect href="/(auth)/sign-in" />;
   }

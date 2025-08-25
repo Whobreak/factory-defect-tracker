@@ -25,7 +25,7 @@ export function SignUpForm() {
   function onSubmit() {
   const success = true; // Swagger’dan dönen response’a göre
   if (success) {
-    router.replace("/home"); // Kayıt başarılı → ana sekmeli sayfaya yönlendir
+    router.replace("/(tabs)/home"); // Kayıt başarılı → ana sekmeli sayfaya yönlendir
   }
 }
 
@@ -73,7 +73,7 @@ export function SignUpForm() {
             Zaten hesabin var mi?{' '}
             <Pressable
               onPress={() => {
-                router.push("/sign-in");
+                router.push("/(auth)/sign-in");
               }}>
               <Text className="text-sm underline underline-offset-4">Giriş yap</Text>
             </Pressable>

@@ -30,7 +30,7 @@ export function SignInForm() {
 
     if (success) {
       // Giriş başarılı → ana sayfaya yönlendir
-        router.replace("/home"); 
+        router.replace("/(tabs)/home"); 
   } else {
     console.log("Login failed");
   }
@@ -91,7 +91,7 @@ export function SignInForm() {
             <Pressable
               onPress={() => {
                 // TODO: Navigate to sign up screen
-                router.push("/sign-up");
+                router.push("/(auth)/sign-up");
               }}>
               <Text className="text-sm underline underline-offset-4">Kaydol</Text>
             </Pressable>
