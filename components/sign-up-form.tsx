@@ -25,7 +25,7 @@ export function SignUpForm() {
   function onSubmit() {
   const success = true; // Swagger’dan dönen response’a göre
   if (success) {
-    router.replace("/(main)");
+    router.replace("/home"); // Kayıt başarılı → ana sekmeli sayfaya yönlendir
   }
 }
 

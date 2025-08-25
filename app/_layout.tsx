@@ -41,7 +41,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         {/* Ana ekran (app/index.tsx) */}
         <Stack.Screen
-          name="index"
+          name="(tabs)"
           options={{
             title: 'Sersim',
             headerRight: () => <ThemeToggle />,

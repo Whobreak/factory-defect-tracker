@@ -30,7 +30,7 @@ export function SignInForm() {
 
     if (success) {
       // Giriş başarılı → ana sayfaya yönlendir
-        router.replace("/(main)");
+        router.replace("/home"); 
   } else {
     console.log("Login failed");
   }
