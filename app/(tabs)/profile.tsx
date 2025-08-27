@@ -181,7 +181,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ currentUser }) => {
 
       {/* Çıkış Yap Butonu */}
       <View style={styles.logoutContainer}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}> // Çıkış yapma işlemi
           <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
         </TouchableOpacity>
       </View>
