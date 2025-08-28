@@ -29,7 +29,7 @@ export type Report = {
 
 // 🔹 Mock Kullanıcılar
 export let mockUsers: User[] = [
-  { id: 1, name: "Ali", role: "worker", line: "A1", password: "1234" },
+  { id: 1, name: "Harika", role: "worker", line: "A1", password: "1234" },
   { id: 2, name: "Ayşe", role: "worker", line: "B2", password: "1234" },
   { id: 3, name: "Admin", role: "admin", line: "", password: "admin123" },
 ];

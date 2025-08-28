@@ -8,6 +8,7 @@ import ReportsList from "~/components/report/ReportsList";
 import ReportFormModal from "~/components/report/ReportFormModal";
 import { flushQueueIfOnline, subscribeQueueFlush } from "~/lib/offlineQueue";
 
+
 export default function EmployeeHomeScreen() {
   const [reports, setReports] = useState<Report[]>(
     mockReports.filter((r) => r.userId === currentUser.id)

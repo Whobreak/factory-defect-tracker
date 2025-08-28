@@ -1,288 +1,197 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Image,
-  Modal,
-  Alert,
-  Platform,
+  ScrollView,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { BarCodeScanner } from "expo-barcode-scanner";
-import { ErrorCode, mockErrorCodes } from "~/lib/mock";
-import { enqueueReportIfOffline } from "~/lib/offlineQueue";
+import {
+  CameraView,
+  useCameraPermissions,
+  BarcodeScanningResult,
+} from "expo-camera";
 
-type ReportFormValues = {
-  barcode: string;
-  productType: string;
-  lineNumber: string;
-  errorCode: ErrorCode;
-  note?: string;
-  photos: string[];
-};
-
-type Props = {
-  initialLineNumber: string;
+interface ReportFormModalProps {
+  initialLineNumber?: string;
   onCancel: () => void;
-  onSubmitOnline: (values: ReportFormValues) => void; // online ise hemen gönder
-};
+  onSubmitOnline: (values: {
+    barcode: string;
+    productType: string;
+    lineNumber: string;
+    errorCode: any;
+    note?: string;
+    photos: string[];
+  }) => void;
+}
 
-export default function ReportFormModal({ initialLineNumber, onCancel, onSubmitOnline }: Props) {
-  // form state
-  const [barcode, setBarcode] = useState("");
-  const [productType, setProductType] = useState("");
-  const [lineNumber, setLineNumber] = useState(initialLineNumber);
-  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
-  const [errorSearch, setErrorSearch] = useState("");
-  const [note, setNote] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [preview, setPreview] = useState<string | null>(null);
+export default function ReportFormModal({
+  initialLineNumber,
+  onCancel,
+  onSubmitOnline,
+}: ReportFormModalProps) {
+  const [formData, setFormData] = useState({
+    barcode: "",
+    productType: "",
+    lineNumber: initialLineNumber || "",
+    errorCode: "",
+    note: "",
+    photos: [] as string[],
+  });
 
-  // modallar
-  const [scannerVisible, setScannerVisible] = useState(false);
-
-  // izinler
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== "web") {
-        const cam = await ImagePicker.requestCameraPermissionsAsync();
-        const bar = await BarCodeScanner.requestPermissionsAsync();
-        if (cam.status !== "granted") {
-          Alert.alert("Uyarı", "Kamera izni verilmedi.");
-        }
-        if (bar.status !== "granted") {
-          Alert.alert("Uyarı", "Barkod okuyucu izni verilmedi.");
-        }
-      }
-    })();
-  }, []);
-
-  const filteredCodes = useMemo(
-    () =>
-      mockErrorCodes.filter(
-        (c) =>
-          c.code.toLowerCase().includes(errorSearch.toLowerCase()) ||
-          c.description.toLowerCase().includes(errorSearch.toLowerCase())
-      ),
-    [errorSearch]
+  const [cameraMode, setCameraMode] = useState<"none" | "barcode" | "photo">(
+    "none"
   );
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
 
-  async function takePhoto() {
-    if (photos.length >= 5) {
-      Alert.alert("Limit", "En fazla 5 fotoğraf ekleyebilirsiniz (5).");
-      return;
+  // Barkod okuma
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+    if (scanning) return;
+    setScanning(true);
+    setFormData((prev) => ({ ...prev, barcode: result.data }));
+    setCameraMode("none");
+    setTimeout(() => setScanning(false), 1000);
+  };
+
+  // Fotoğraf çekme
+  const takePhoto = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync({ base64: true });
+      setFormData((prev) => ({
+        ...prev,
+        photos: [...prev.photos, photo.uri],
+      }));
+      setCameraMode("none");
     }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      setPhotos((prev) => [...prev, result.assets[0].uri]);
-    }
-  }
-
-  function removePhoto(uri: string) {
-    setPhotos((prev) => prev.filter((p) => p !== uri));
-  }
-
-  function reset() {
-    setBarcode("");
-    setProductType("");
-    setLineNumber(initialLineNumber);
-    setErrorCode(null);
-    setErrorSearch("");
-    setNote("");
-    setPhotos([]);
-    setPreview(null);
-  }
-
-  async function handleSave() {
-    if (!barcode || !productType || !lineNumber || !errorCode || photos.length === 0) {
-      Alert.alert(
-        "Eksik Bilgi",
-        "Barkod, ürün türü, bant, hata kodu zorunlu ve en az 1 fotoğraf çekmelisiniz."
-      );
-      return;
-    }
-
-    const payload: ReportFormValues = {
-      barcode,
-      productType,
-      lineNumber,
-      errorCode,
-      note,
-      photos,
-    };
-
-    // Online ise onSubmitOnline çağır; offline ise kuyruğa ekle (ve kullanıcıyı bilgilendir)
-    const queued = await enqueueReportIfOffline(payload);
-    if (!queued) {
-      // online gönderim
-      onSubmitOnline(payload);
-      Alert.alert("Başarılı", "Rapor gönderildi.");
-    } else {
-      Alert.alert(
-        "Çevrimdışı Kaydedildi",
-        "İnternet yokken kaydedildi. Bağlantı gelince otomatik yüklenecek."
-      );
-    }
-
-    reset();
-    onCancel();
-  }
+  };
 
   return (
-    <View className="flex-1 bg-white p-4 rounded-t-2xl mt-auto">
-      <Text className="text-xl font-bold mb-4">Yeni Hata Raporu</Text>
+    <View className="flex-1 bg-white rounded-2xl p-4">
+      <ScrollView>
+        <Text className="text-lg font-bold mb-3">Yeni Rapor</Text>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Barkod */}
-        <Text className="text-gray-700 mb-1">Ürün Barkodu</Text>
-        <View className="flex-row mb-3">
+        <Text className="text-gray-600">Barkod</Text>
+        <View className="flex-row items-center mb-3">
           <TextInput
-            value={barcode}
-            onChangeText={setBarcode}
-            className="border border-gray-300 p-3 rounded-xl flex-1 mr-2"
-            placeholder="Barkodu tara veya yaz"
-            // Donanım barkod okuyucu klavye gibi yazarsa otomatik dolar
+            className="flex-1 border p-2 rounded bg-gray-100"
+            placeholder="Barkod okut veya yaz"
+            value={formData.barcode}
+            onChangeText={(t) => setFormData({ ...formData, barcode: t })}
           />
           <TouchableOpacity
-            onPress={() => setScannerVisible(true)}
-            className="bg-slate-800 px-3 rounded-xl justify-center"
+            className="ml-2 p-2 bg-cyan-500 rounded"
+            onPress={() => {
+              if (!permission?.granted) {
+                requestPermission();
+              }
+              setCameraMode("barcode");
+            }}
           >
-            <Text className="text-white">Tara</Text>
+            <Text className="text-white">Oku</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Ürün türü */}
-        <Text className="text-gray-700 mb-1">Ürün Türü</Text>
-        <TextInput
-          value={productType}
-          onChangeText={setProductType}
-          className="border border-gray-300 p-3 rounded-xl mb-3"
-          placeholder="Örn: Motor Parçası"
-        />
-
-        {/* Bant */}
-        <Text className="text-gray-700 mb-1">Bant Numarası</Text>
-        <TextInput
-          value={lineNumber}
-          onChangeText={setLineNumber}
-          className="border border-gray-300 p-3 rounded-xl mb-3"
-          placeholder="Örn: A1, Bant 3..."
-        />
-
-        {/* Hata kodu arama */}
-        <Text className="text-gray-700 mb-1">Hata Kodu Ara / Seç</Text>
-        <TextInput
-          value={errorSearch}
-          onChangeText={setErrorSearch}
-          className="border border-gray-300 p-3 rounded-xl mb-2"
-          placeholder="E101, lehim, montaj..."
-        />
-        <View style={{ maxHeight: 160 }} className="mb-3">
-          <ScrollView>
-            {filteredCodes.map((item) => (
+        {/* Kamera - Barkod veya Fotoğraf */}
+        {cameraMode !== "none" && (
+          <View className="h-72 rounded overflow-hidden mb-3">
+            <CameraView
+              ref={cameraRef}
+              style={{ flex: 1 }}
+              facing="back"
+              onBarcodeScanned={
+                cameraMode === "barcode" ? handleBarcodeScanned : undefined
+              }
+            />
+            {cameraMode === "photo" && (
               <TouchableOpacity
-                key={item.id}
-                onPress={() => setErrorCode(item)}
-                className={`p-3 rounded-xl mb-2 ${
-                  errorCode?.id === item.id ? "bg-cyan-500" : "bg-gray-200"
-                }`}
+                className="absolute bottom-3 self-center px-6 py-2 bg-cyan-600 rounded-full"
+                onPress={takePhoto}
               >
-                <Text className={errorCode?.id === item.id ? "text-white font-semibold" : "text-gray-800 font-semibold"}>
-                  {item.code}
-                </Text>
-                <Text className={errorCode?.id === item.id ? "text-white" : "text-gray-600"}>
-                  {item.description}
-                </Text>
+                <Text className="text-white text-lg">📸 Çek</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+            )}
+          </View>
+        )}
 
-        {/* Opsiyonel açıklama */}
-        <Text className="text-gray-700 mb-1">Açıklama (opsiyonel)</Text>
+        {/* Ürün tipi */}
+        <Text className="text-gray-600">Ürün Tipi</Text>
         <TextInput
-          value={note}
-          onChangeText={setNote}
-          className="border border-gray-300 p-3 rounded-xl mb-3"
-          placeholder="Kısa açıklama"
-          multiline
+          className="border p-2 rounded mb-3 bg-gray-100"
+          placeholder="Ürün tipi girin"
+          value={formData.productType}
+          onChangeText={(t) => setFormData({ ...formData, productType: t })}
         />
 
-        {/* Fotoğraflar */}
-        <Text className="text-gray-700 mb-2">Fotoğraflar (min 1 • max 5)</Text>
-        <View className="flex-row flex-wrap">
-          {photos.map((uri) => (
-            <View key={uri} className="mr-2 mb-2">
-              <TouchableOpacity onPress={() => setPreview(uri)}>
-                <Image source={{ uri }} className="w-20 h-20 rounded-xl border border-gray-300" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => removePhoto(uri)}
-                className="bg-red-500 rounded-xl mt-1 py-1"
-              >
-                <Text className="text-white text-center text-xs">Sil</Text>
-              </TouchableOpacity>
-            </View>
+        {/* Hat */}
+        <Text className="text-gray-600">Hat</Text>
+        <TextInput
+          className="border p-2 rounded mb-3 bg-gray-100"
+          placeholder="Hat numarası"
+          value={formData.lineNumber}
+          onChangeText={(t) => setFormData({ ...formData, lineNumber: t })}
+        />
+
+        {/* Hata Kodu */}
+        <Text className="text-gray-600">Hata Kodu</Text>
+        <TextInput
+          className="border p-2 rounded mb-3 bg-gray-100"
+          placeholder="Hata kodu"
+          value={formData.errorCode}
+          onChangeText={(t) => setFormData({ ...formData, errorCode: t })}
+        />
+
+        {/* Not */}
+        <Text className="text-gray-600">Not</Text>
+        <TextInput
+          className="border p-2 rounded mb-3 bg-gray-100"
+          placeholder="Ekstra not (opsiyonel)"
+          value={formData.note}
+          onChangeText={(t) => setFormData({ ...formData, note: t })}
+        />
+
+        {/* Fotoğraf */}
+        <Text className="text-gray-600">Fotoğraflar</Text>
+        <ScrollView horizontal className="mb-3">
+          {formData.photos.map((uri, idx) => (
+            <Image
+              key={idx}
+              source={{ uri }}
+              className="w-24 h-24 mr-2 rounded"
+            />
           ))}
-          {photos.length < 5 && (
-            <TouchableOpacity
-              onPress={takePhoto}
-              className="w-20 h-20 bg-gray-200 rounded-xl items-center justify-center"
-            >
-              <Text className="text-2xl">📷</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Önizleme Modal */}
-        <Modal visible={!!preview} transparent animationType="fade">
           <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setPreview(null)}
-            className="flex-1 bg-black/85 justify-center items-center"
+            className="w-24 h-24 bg-cyan-200 rounded items-center justify-center"
+            onPress={() => {
+              if (!permission?.granted) {
+                requestPermission();
+              }
+              setCameraMode("photo");
+            }}
           >
-            {preview ? (
-              <Image source={{ uri: preview }} className="w-80 h-96 rounded-xl" resizeMode="contain" />
-            ) : null}
-            <Text className="text-white mt-3">Kapatmak için dokun</Text>
+            <Text className="text-cyan-700 text-2xl">+</Text>
           </TouchableOpacity>
-        </Modal>
+        </ScrollView>
 
-        {/* Aksiyonlar */}
-        <View className="flex-row mt-5">
-          <TouchableOpacity onPress={onCancel} className="flex-1 bg-gray-400 p-4 rounded-xl mr-2">
-            <Text className="text-center text-white font-semibold">İptal</Text>
+        {/* Kaydet / İptal */}
+        <View className="flex-row justify-end mt-4">
+          <TouchableOpacity
+            className="px-4 py-2 bg-gray-400 rounded mr-2"
+            onPress={onCancel}
+          >
+            <Text className="text-white">İptal</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} className="flex-1 bg-green-600 p-4 rounded-xl ml-2">
-            <Text className="text-center text-white font-semibold">Gönder</Text>
+          <TouchableOpacity
+            className="px-4 py-2 bg-cyan-600 rounded"
+            onPress={() => onSubmitOnline(formData)}
+          >
+            <Text className="text-white">Kaydet</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Barkod Tarama Modal */}
-      <Modal visible={scannerVisible} animationType="slide">
-        <View className="flex-1 bg-black">
-          <BarCodeScanner
-            style={{ flex: 1 }}
-            onBarCodeScanned={({ data }) => {
-              setBarcode(String(data));
-              setScannerVisible(false);
-            }}
-          />
-          <TouchableOpacity
-            onPress={() => setScannerVisible(false)}
-            className="absolute top-10 right-4 bg-red-600 px-3 py-2 rounded-xl"
-          >
-            <Text className="text-white font-semibold">Kapat</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
     </View>
   );
 }
