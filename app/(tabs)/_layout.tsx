@@ -22,14 +22,19 @@ export default function TabLayout() {
           height: Platform.OS === 'ios' ? 88 : 70,
           paddingBottom: Platform.OS === 'ios' ? 20 : 10,
           paddingTop: 10,
-          elevation: 8,
-          shadowColor: colors.text,
-          shadowOffset: {
-            width: 0,
-            height: -4,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
+          elevation: Platform.OS === 'android' ? 8 : 0,
+          // Web için boxShadow, mobil için shadow props
+          ...(Platform.OS === 'web' ? {
+            boxShadow: `0 -4px 12px rgba(0, 0, 0, 0.1)`,
+          } : {
+            shadowColor: colors.text,
+            shadowOffset: {
+              width: 0,
+              height: -4,
+            },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+          }),
         },
         tabBarLabelStyle: {
           fontSize: 11,

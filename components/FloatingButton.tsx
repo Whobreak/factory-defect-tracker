@@ -1,6 +1,6 @@
 // components/FloatingButton.tsx
-import React from "react";
-import { TouchableOpacity, Text, Animated } from "react-native";
+import React, { useRef } from "react";
+import { TouchableOpacity, Animated, StyleSheet } from "react-native";
 import { Plus } from "lucide-react-native";
 import { useTheme } from "~/hooks/useTheme";
 
@@ -10,7 +10,7 @@ type Props = {
 
 export default function FloatingButton({ onPress }: Props) {
   const { colors } = useTheme();
-  const scaleValue = new Animated.Value(1);
+  const scaleValue = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -28,37 +28,26 @@ export default function FloatingButton({ onPress }: Props) {
 
   return (
     <Animated.View
-      className="absolute bottom-6 right-6 shadow-lg"
-      style={{
-        transform: [{ scale: scaleValue }],
-      }}
+      style={[
+        styles.container,
+        {
+          transform: [{ scale: scaleValue }],
+        },
+      ]}
     >
       <TouchableOpacity
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        className="w-16 h-16 rounded-full items-center justify-center elevation-8"
-        style={{ 
-          backgroundColor: colors.primary,
-          shadowColor: colors.primary,
-          shadowOffset: {
-            width: 0,
-            height: 4,
-          },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-        }}
-      >
-        {/* Glow effect */}
-        <div 
-          className="absolute inset-0 rounded-full opacity-20"
-          style={{ 
+        style={[
+          styles.button,
+          { 
             backgroundColor: colors.primary,
-            filter: 'blur(8px)',
-            transform: `scale(${1.1})`
-          }} 
-        />
-        
+            shadowColor: colors.primary,
+          }
+        ]}
+        activeOpacity={0.8}
+      >
         <Plus 
           color={colors.primaryForeground} 
           size={28} 
@@ -68,3 +57,27 @@ export default function FloatingButton({ onPress }: Props) {
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    elevation: 8, // Android shadow
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    zIndex: 1000,
+  },
+  button: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8, // Android shadow
+  },
+});
