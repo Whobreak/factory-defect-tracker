@@ -4,7 +4,7 @@ import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
-import { Appearance, Platform } from 'react-native';
+import { Appearance, Platform, Image } from 'react-native';
 import { NAV_THEME } from '~/lib/constants';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
@@ -20,9 +20,7 @@ const DARK_THEME: Theme = {
   colors: NAV_THEME.dark,
 };
 
-export {
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 const usePlatformSpecificSetup = Platform.select({
   web: useSetWebBackgroundClassName,
@@ -37,14 +35,20 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-      
+
       <Stack screenOptions={{ headerShown: false }}>
         {/* Ana ekran (app/index.tsx) */}
         <Stack.Screen
           name="(tabs)"
           options={{
-            title: 'Sersim',
-            headerRight: () => <ThemeToggle />,
+            // Logo headerTitle olarak eklendi
+            headerShown: true, // header görünür yapıldı
+            headerTitle: () => (
+              <Image
+                source={{ uri: "https://i.ytimg.com/vi/fFTcHOFwfoQ/maxresdefault.jpg" }}
+                style={{ width: 150, height: 50, resizeMode: 'contain' }}
+              />
+            ),
           }}
         />
 
