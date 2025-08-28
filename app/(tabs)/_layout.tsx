@@ -1,26 +1,66 @@
+// app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
-import { ListCollapse, User  } from 'lucide-react-native';
+import { ListCollapse, User } from 'lucide-react-native';
+import { useTheme } from "~/hooks/useTheme";
+import { Platform } from "react-native";
 
 export default function TabLayout() {
+  const { colors, isDark } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarLabelPosition: 'below-icon',
         tabBarShowLabel: true,
-        tabBarActiveTintColor: '#22d3ee',
-        tabBarInactiveTintColor: '#94a3b8',
-        tabBarStyle: { backgroundColor: '#0f172a' },
-        headerStyle: { backgroundColor: '#0f172a' },
-        headerTitleStyle: { color: '#f8fafc' },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: { 
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 88 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          paddingTop: 10,
+          elevation: 8,
+          shadowColor: colors.text,
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
+        },
+        headerStyle: { 
+          backgroundColor: colors.background,
+          borderBottomColor: colors.border,
+        },
+        headerTitleStyle: { 
+          color: colors.text,
+          fontWeight: '600',
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-           title: 'Sersim',
-          tabBarLabel: 'Listeler',
-          tabBarIcon: ({ color }) => <ListCollapse  color={color} size={24} />,  
+          title: 'Ana Sayfa',
+          tabBarLabel: 'Raporlar',
+          tabBarIcon: ({ color, focused }) => (
+            <ListCollapse 
+              color={color} 
+              size={focused ? 26 : 24} 
+              strokeWidth={focused ? 2.5 : 2}
+            />
+          ),  
         }}
       />
       <Tabs.Screen
@@ -28,7 +68,13 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarLabel: 'Profil',
-          tabBarIcon: ({color}) => <User color={color} size={24} />,
+          tabBarIcon: ({ color, focused }) => (
+            <User 
+              color={color} 
+              size={focused ? 26 : 24}
+              strokeWidth={focused ? 2.5 : 2}
+            />
+          ),
         }}
       />
     </Tabs>
