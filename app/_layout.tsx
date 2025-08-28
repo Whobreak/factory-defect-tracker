@@ -49,6 +49,8 @@ export default function RootLayout() {
                 style={{ width: 150, height: 50, resizeMode: 'contain' }}
               />
             ),
+            headerTitleAlign: 'center', // logo ortada
+            headerRight: () => <ThemeToggle />, // sağda tema butonu
           }}
         />
 
