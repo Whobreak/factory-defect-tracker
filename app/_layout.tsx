@@ -4,11 +4,11 @@ import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
-import { Appearance, Platform, Image } from 'react-native';
+import { Appearance, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NAV_THEME } from '~/lib/constants';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
-import { ThemeToggle } from '~/components/ThemeToggle';
 import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
 
 const LIGHT_THEME: Theme = {
@@ -33,36 +33,24 @@ export default function RootLayout() {
   const { isDarkColorScheme } = useColorScheme();
 
   return (
-    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+    <SafeAreaProvider>
+      <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+        <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
+        
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Ana ekran - index.tsx */}
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          
+          {/* Auth grubu */}
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          
+          {/* Tabs grubu */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
 
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Ana ekran (app/index.tsx) */}
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            // Logo headerTitle olarak eklendi
-            headerShown: true, // header görünür yapıldı
-            headerTitle: () => (
-              <Image
-                source={{ uri: "https://i.ytimg.com/vi/fFTcHOFwfoQ/maxresdefault.jpg" }}
-                style={{ width: 150, height: 50, resizeMode: 'contain' }}
-              />
-            ),
-            headerTitleAlign: 'center', // logo ortada
-            headerRight: () => <ThemeToggle />, // sağda tema butonu
-          }}
-        />
-
-        {/* ❌ sign-in ve sign-up buradan kaldırıldı */}
-        {/* Onlar zaten (auth)/_layout.tsx altında var */}
-
-        {/* Örn. login sonrası yönlendirilecek home ekranı */}
-        <Stack.Screen name="home" options={{ title: 'Ana Sayfa' }} />
-      </Stack>
-
-      <PortalHost />
-    </ThemeProvider>
+        <PortalHost />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
