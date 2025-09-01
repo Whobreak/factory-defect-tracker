@@ -4,7 +4,6 @@ import { View, Text, Modal, StatusBar, Dimensions, RefreshControl } from "react-
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mockReports, currentUser, addReport, Report } from "~/lib/mock";
 import { useTheme } from "~/hooks/useTheme";
-
 import HeaderBadge from "~/components/HeaderBadge";
 import FloatingButton from "~/components/FloatingButton";
 import ReportsList from "~/components/report/ReportsList";
@@ -197,7 +196,7 @@ export default function EmployeeHomeScreen() {
           transparent 
           animationType="slide"
           statusBarTranslucent
-        >
+        > 
           <View className="flex-1 bg-black/50 justify-end">
             <ReportFormModal
               initialLineNumber={currentUser.line}
