@@ -1,4 +1,4 @@
-// app/(tabs)/home.tsx
+// app/(tabs)/home.tsx - Modal kısmı düzeltildi
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Modal, StatusBar, Dimensions, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -191,20 +191,23 @@ export default function EmployeeHomeScreen() {
           }
         />
 
-        <Modal 
-          visible={formVisible} 
-          transparent 
-          animationType="slide"
-          statusBarTranslucent
-        > 
-          <View className="flex-1 bg-black/50 justify-end">
-            <ReportFormModal
-              initialLineNumber={currentUser.line}
-              onCancel={() => setFormVisible(false)}
-              onSubmitOnline={handleSubmitOnline}
-            />
-          </View>
-        </Modal>
+        {/* DÜZELTME: Daha temiz Modal implementasyonu */}
+          <Modal 
+            visible={formVisible} 
+            transparent 
+            animationType="slide"
+            statusBarTranslucent
+          > 
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <ReportFormModal
+                  initialLineNumber={currentUser.line}
+                  onCancel={() => setFormVisible(false)}
+                  onSubmitOnline={handleSubmitOnline}
+                />
+              </View>
+            </View>
+          </Modal>
 
         <FloatingButton onPress={() => setFormVisible(true)} />
       </View>

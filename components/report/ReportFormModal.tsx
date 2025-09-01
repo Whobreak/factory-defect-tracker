@@ -1,9 +1,4 @@
-<<<<<<< Updated upstream
-// components/report/ReportFormModal.tsx
-import React, { useState, useRef } from "react";
-=======
 import React, { useState, useRef, useCallback } from "react";
->>>>>>> Stashed changes
 import {
   View,
   Text,
@@ -12,18 +7,14 @@ import {
   Image,
   ScrollView,
   Alert,
-  KeyboardAvoidingView,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  CameraView,
-  useCameraPermissions,
-  BarcodeScanningResult,
-} from "expo-camera";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Camera, CameraView, useCameraPermissions } from "expo-camera";
 import { 
   X, 
-  Camera, 
+  Camera as CameraIcon, 
   QrCode, 
   AlertCircle, 
   Check,
@@ -31,6 +22,11 @@ import {
   Trash2
 } from "lucide-react-native";
 import { useTheme } from "~/hooks/useTheme";
+
+// Ref Tipleri: useRef<TextInput | null>(null) olarak düzeltildi
+// Focus Fonksiyonu: Parametre tipi React.RefObject<TextInput | null> olarak güncellendi
+// Null Safety: ?. operatörü ile null kontrolleri korundu
+
 
 interface ReportFormModalProps {
   initialLineNumber?: string;
@@ -50,6 +46,7 @@ interface FormErrors {
   productType?: string;
   lineNumber?: string;
   errorCode?: string;
+  note?: string;
   photos?: string;
 }
 
@@ -60,7 +57,7 @@ export default function ReportFormModal({
 }: ReportFormModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  
+
   const [formData, setFormData] = useState({
     barcode: "",
     productType: "",
@@ -76,6 +73,13 @@ export default function ReportFormModal({
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+
+  // input refs for proper next-focus behavior
+  const barcodeRef = useRef<TextInput | null>(null);
+  const productTypeRef = useRef<TextInput | null>(null);
+  const lineNumberRef = useRef<TextInput | null>(null);
+  const errorCodeRef = useRef<TextInput | null>(null);
+  const noteRef = useRef<TextInput | null>(null);
 
   // --- Validation
   const validateForm = (): boolean => {
@@ -107,13 +111,15 @@ export default function ReportFormModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Barcode
-  const handleBarcodeScanned = useCallback((result: BarcodeScanningResult) => {
+  // --- Barcode handler
+  const handleBarCodeScanned = useCallback((event: { type: string; data: string }) => {
     if (scanning) return;
     setScanning(true);
-    setFormData((prev) => ({ ...prev, barcode: result.data }));
-    setErrors(prev => ({ ...prev, barcode: undefined }));
+    
+    setFormData((prev) => ({ ...prev, barcode: event.data }));
+    setErrors((prev) => ({ ...prev, barcode: undefined }));
     setCameraMode("none");
+    
     setTimeout(() => setScanning(false), 1000);
   }, [scanning]);
 
@@ -122,14 +128,15 @@ export default function ReportFormModal({
     if (cameraRef.current) {
       try {
         const photo = await cameraRef.current.takePictureAsync({ 
-          base64: false,
-          quality: 0.8 
+          quality: 0.8,
         });
-        setFormData((prev) => ({
-          ...prev,
-          photos: [...prev.photos, photo.uri],
-        }));
-        setErrors(prev => ({ ...prev, photos: undefined }));
+        if (photo?.uri) {
+          setFormData((prev) => ({
+            ...prev,
+            photos: [...prev.photos, photo.uri],
+          }));
+          setErrors((prev) => ({ ...prev, photos: undefined }));
+        }
         setCameraMode("none");
       } catch (error) {
         Alert.alert("Hata", "Fotoğraf çekilirken bir hata oluştu");
@@ -138,9 +145,9 @@ export default function ReportFormModal({
   }, []);
 
   const removePhoto = useCallback((index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
+      photos: prev.photos.filter((_, i) => i !== index),
     }));
   }, []);
 
@@ -150,7 +157,7 @@ export default function ReportFormModal({
 
     setIsSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 400)); // Simulated delay
+      await new Promise((resolve) => setTimeout(resolve, 400)); // simulated delay
       onSubmitOnline(formData);
     } catch (error) {
       Alert.alert("Hata", "Rapor gönderilirken bir hata oluştu");
@@ -159,439 +166,495 @@ export default function ReportFormModal({
     }
   }, [formData, onSubmitOnline]);
 
-  // --- Input change
-  const handleInputChange = useCallback((field: keyof typeof formData) => {
-    return (value: string) => {
-      setFormData(prev => ({ ...prev, [field]: value }));
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    };
-  }, []);
-
-  // --- Open camera
-  const openCamera = useCallback((mode: "barcode" | "photo") => {
-    return async () => {
-      if (!permission?.granted) {
-        await requestPermission();
-      }
-      setCameraMode(mode);
-    };
-  }, [permission, requestPermission]);
-
-  // --- Reusable Input
-  const InputField = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
-    error, 
-    multiline = false,
-    required = false 
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    placeholder: string;
-    error?: string;
-    multiline?: boolean;
-    required?: boolean;
-  }) => (
-    <View className="mb-4">
-      <View className="flex-row items-center mb-2">
-        <Text 
-          className="text-sm font-medium"
-          style={{ color: colors.text }}
-        >
-          {label}
-        </Text>
-        {required && (
-          <Text className="ml-1 text-red-500">*</Text>
-        )}
-      </View>
-      <TextInput
-        className={`p-4 rounded-xl border ${error ? 'border-red-400' : 'border-transparent'} ${multiline ? 'h-24' : 'h-12'}`}
-        style={{ 
-          backgroundColor: colors.surfaceSecondary,
-          color: colors.text,
-          textAlignVertical: multiline ? 'top' : 'center'
-        }}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        returnKeyType={multiline ? "default" : "next"}
-        submitBehavior={multiline ? "blurAndSubmit" : "submit"}
-      />
-      {error && (
-        <View className="flex-row items-center mt-1">
-          <AlertCircle color={colors.error} size={16} />
-          <Text 
-            className="ml-1 text-sm"
-            style={{ color: colors.error }}
-          >
-            {error}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
-  // useCallback ile değiştirilmiş input 
-  const handleInputChange = useCallback((field: keyof typeof formData, value: string) => {
+  // --- Input change - DÜZELTME: useCallback kaldırıldı, basit fonksiyon
+  const updateField = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setErrors(prev => ({ ...prev, [field]: undefined }));
-  }, []);
+    // Error'ı hemen temizle
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  // --- Open camera - DÜZELTME: Daha basit yaklaşım
+  const openBarcodeCamera = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) return;
+    }
+    setCameraMode("barcode");
+  };
+
+  const openPhotoCamera = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) return;
+    }
+    setCameraMode("photo");
+  };
+
+  // --- DÜZELTME: Fokus handling fonksiyonları
+  const focusNext = (nextRef: React.RefObject<TextInput | null>) => {
+    setTimeout(() => {
+      nextRef.current?.focus();
+    }, 100);
+  };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
-      <KeyboardAvoidingView 
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={insets.top}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <View 
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          marginTop: insets.top + 20,
+          overflow: "hidden",
+        }}
       >
+        {/* Header */}
         <View 
-          className="flex-1 rounded-t-3xl overflow-hidden"
-          style={{ backgroundColor: colors.background }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: 24,
+            paddingBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+          }}
         >
-          {/* Header */}
-          <View 
-            className="flex-row items-center justify-between p-6 pb-4 border-b"
-            style={{ borderBottomColor: colors.border, paddingTop: 8 }}
+          <Text style={{ fontSize: 20, fontWeight: "bold", color: colors.text }}>
+            Yeni Rapor
+          </Text>
+          <TouchableOpacity 
+            onPress={onCancel} 
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.surfaceSecondary,
+            }}
           >
-            <Text 
-              className="text-xl font-bold"
-              style={{ color: colors.text }}
-            >
-              Yeni Rapor
-            </Text>
-            <TouchableOpacity
-              onPress={onCancel}
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: colors.surfaceSecondary }}
-            >
-              <X color={colors.textSecondary} size={20} />
-            </TouchableOpacity>
+            <X color={colors.textSecondary} size={20} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView 
+          style={{ flex: 1, paddingHorizontal: 24 }}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // DÜZELTME: Klavye davranışı
+          keyboardDismissMode="interactive"
+        >
+          {/* Barkod */}
+          <View style={{ marginBottom: 16, marginTop: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Barkod
+              </Text>
+              <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
+            </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TextInput
+                ref={barcodeRef}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: errors.barcode ? "#f87171" : "transparent",
+                  backgroundColor: colors.surfaceSecondary,
+                  color: colors.text,
+                  height: 48,
+                  marginRight: 12,
+                }}
+                placeholder="Barkod okut veya manuel gir"
+                placeholderTextColor={colors.textMuted}
+                value={formData.barcode}
+                onChangeText={(text) => updateField("barcode", text)}
+                returnKeyType="next"
+                onSubmitEditing={() => focusNext(productTypeRef)}
+                blurOnSubmit={false}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+
+              <TouchableOpacity 
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.primary,
+                }} 
+                onPress={openBarcodeCamera}
+              >
+                <QrCode color={colors.primaryForeground} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            {errors.barcode && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                <AlertCircle color={colors.error} size={16} />
+                <Text style={{ marginLeft: 4, fontSize: 14, color: colors.error }}>
+                  {errors.barcode}
+                </Text>
+              </View>
+            )}
           </View>
 
-          <ScrollView 
-            className="flex-1 px-6"
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="always"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={{ paddingBottom: 16 }}
-          >
-            {/* Barkod */}
-            <View className="mb-4 mt-4">
-              <View className="flex-row items-center mb-2">
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: colors.text }}
-                >
-                  Barkod
-                </Text>
-                <Text className="ml-1 text-red-500">*</Text>
-              </View>
-              <View className="flex-row items-center">
-                <TextInput
-                  className={`flex-1 p-4 rounded-xl border mr-3 ${errors.barcode ? 'border-red-400' : 'border-transparent'}`}
-                  style={{ 
-                    backgroundColor: colors.surfaceSecondary,
-                    color: colors.text
-                  }}
-                  placeholder="Barkod okut veya manuel gir"
-                  placeholderTextColor={colors.textMuted}
-                  value={formData.barcode}
-                  onChangeText={handleInputChange("barcode")}
-                  returnKeyType="next"
-                  submitBehavior="submit"
-                />
-                <TouchableOpacity
-                  className="w-12 h-12 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: colors.primary }}
-                  onPress={openCamera("barcode")}
-                >
-                  <QrCode color={colors.primaryForeground} size={20} />
-                </TouchableOpacity>
-              </View>
-              {errors.barcode && (
-                <View className="flex-row items-center mt-1">
-                  <AlertCircle color={colors.error} size={16} />
-                  <Text 
-                    className="ml-1 text-sm"
-                    style={{ color: colors.error }}
-                  >
-                    {errors.barcode}
+          {/* Kamera Görünümü */}
+          {cameraMode !== "none" && (
+            <View style={{ height: 320, borderRadius: 16, overflow: "hidden", marginBottom: 24, position: "relative" }}>
+              <CameraView
+                ref={cameraRef}
+                style={{ flex: 1 }}
+                facing="back"
+                onBarcodeScanned={cameraMode === "barcode" ? handleBarCodeScanned : undefined}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr", "ean13", "ean8", "code128"],
+                }}
+              />
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.2)" }} />
+
+              {cameraMode === "barcode" && (
+                <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+                  <View 
+                    style={{
+                      width: 256,
+                      height: 256,
+                      borderWidth: 2,
+                      borderColor: "white",
+                      borderRadius: 16,
+                      borderStyle: "dashed",
+                    }} 
+                  />
+                  <Text style={{ color: "white", textAlign: "center", marginTop: 16, fontWeight: "500" }}>
+                    Barkodu kameraya tutun
                   </Text>
                 </View>
               )}
+
+              {cameraMode === "photo" && (
+                <TouchableOpacity 
+                  style={{
+                    position: "absolute",
+                    bottom: 24,
+                    alignSelf: "center",
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    borderWidth: 4,
+                    borderColor: "white",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.primary,
+                  }} 
+                  onPress={takePhoto}
+                >
+                  <CameraIcon color="white" size={24} />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity 
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }} 
+                onPress={() => setCameraMode("none")}
+              >
+                <X color="white" size={20} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Ürün Tipi */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Ürün Tipi
+              </Text>
+              <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
             </View>
 
-<<<<<<< Updated upstream
-          {/* Form Fields */}
-          <InputField
-            label="Ürün Tipi"
-            value={formData.productType}
-            onChangeText={(t) => handleInputChange("productType", t)}
-            placeholder="Ürün tipini girin"
-            error={errors.productType}
-            required
-          />
+            <TextInput
+              ref={productTypeRef}
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: errors.productType ? "#f87171" : "transparent",
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                height: 48,
+              }}
+              placeholder="Ürün tipini girin"
+              placeholderTextColor={colors.textMuted}
+              value={formData.productType}
+              onChangeText={(text) => updateField("productType", text)}
+              returnKeyType="next"
+              onSubmitEditing={() => focusNext(lineNumberRef)}
+              blurOnSubmit={false}
+              autoCorrect={false}
+            />
 
-          <InputField
-            label="Hat Numarası"
-            value={formData.lineNumber}
-            onChangeText={(t) => handleInputChange("lineNumber", t)}
-            placeholder="Hat numarasını girin"
-            error={errors.lineNumber}
-            required
-          />
+            {errors.productType && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                <AlertCircle color={colors.error} size={16} />
+                <Text style={{ marginLeft: 4, fontSize: 14, color: colors.error }}>
+                  {errors.productType}
+                </Text>
+              </View>
+            )}
+          </View>
 
-          <InputField
-            label="Hata Kodu"
-            value={formData.errorCode}
-            onChangeText={(t) => handleInputChange("errorCode", t)}
-            placeholder="Hata kodunu girin"
-            error={errors.errorCode}
-            required
-          />
+          {/* Hat Numarası */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Band Numarası
+              </Text>
+              <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
+            </View>
 
-          <InputField
-            label="Not"
-            value={formData.note}
-            onChangeText={(t) => handleInputChange("note", t)}
-            placeholder="Ek açıklama (isteğe bağlı)"
-            multiline
-          />
+            <TextInput
+              ref={lineNumberRef}
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: errors.lineNumber ? "#f87171" : "transparent",
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                height: 48,
+              }}
+              placeholder="Hat numarasını girin"
+              placeholderTextColor={colors.textMuted}
+              value={formData.lineNumber}
+              onChangeText={(text) => updateField("lineNumber", text)}
+              returnKeyType="next"
+              onSubmitEditing={() => focusNext(errorCodeRef)}
+              blurOnSubmit={false}
+              autoCorrect={false}
+            />
+
+            {errors.lineNumber && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                <AlertCircle color={colors.error} size={16} />
+                <Text style={{ marginLeft: 4, fontSize: 14, color: colors.error }}>
+                  {errors.lineNumber}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Hata Kodu */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Hata Kodu
+              </Text>
+              <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
+            </View>
+
+            <TextInput
+              ref={errorCodeRef}
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: errors.errorCode ? "#f87171" : "transparent",
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                height: 48,
+              }}
+              placeholder="Hata kodunu girin"
+              placeholderTextColor={colors.textMuted}
+              value={formData.errorCode}
+              onChangeText={(text) => updateField("errorCode", text)}
+              returnKeyType="next"
+              onSubmitEditing={() => focusNext(noteRef)}
+              blurOnSubmit={false}
+              autoCorrect={false}
+            />
+
+            {errors.errorCode && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                <AlertCircle color={colors.error} size={16} />
+                <Text style={{ marginLeft: 4, fontSize: 14, color: colors.error }}>
+                  {errors.errorCode}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Not */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Not
+              </Text>
+            </View>
+
+            <TextInput
+              ref={noteRef}
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "transparent",
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                height: 96,
+                textAlignVertical: "top",
+              }}
+              placeholder="Ek açıklama (isteğe bağlı)"
+              placeholderTextColor={colors.textMuted}
+              value={formData.note}
+              onChangeText={(text) => updateField("note", text)}
+              multiline
+              returnKeyType="default"
+              blurOnSubmit={true}
+            />
+          </View>
 
           {/* Fotoğraflar */}
-          <View className="mb-6">
-            <View className="flex-row items-center mb-2">
-              <Text 
-                className="text-sm font-medium"
-                style={{ color: colors.text }}
-              >
+          <View style={{ marginBottom: 24 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
                 Fotoğraflar
               </Text>
-              <Text className="ml-1 text-red-500">*</Text>
+              <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
             </View>
-            
+
             <ScrollView 
               horizontal 
-              showsHorizontalScrollIndicator={false}
-              className="mb-2"
+              showsHorizontalScrollIndicator={false} 
+              style={{ marginBottom: 8 }}
             >
               {formData.photos.map((uri, idx) => (
-                <View key={idx} className="mr-3 relative">
-                  <Image
-                    source={{ uri }}
-                    className="w-24 h-24 rounded-xl"
-                  />
-                  <TouchableOpacity
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full items-center justify-center"
-                    style={{ backgroundColor: colors.error }}
+                <View key={idx} style={{ marginRight: 12, position: "relative" }}>
+                  <Image source={{ uri }} style={{ width: 96, height: 96, borderRadius: 12 }} />
+                  <TouchableOpacity 
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -8,
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: colors.error,
+                    }} 
                     onPress={() => removePhoto(idx)}
                   >
                     <Trash2 color="white" size={12} />
                   </TouchableOpacity>
                 </View>
               ))}
-              
-              <TouchableOpacity
-                className="w-24 h-24 rounded-xl items-center justify-center border-2 border-dashed"
-                style={{ borderColor: colors.border, backgroundColor: colors.surfaceSecondary }}
-                onPress={() => {
-                  if (!permission?.granted) {
-                    requestPermission();
-=======
-            {/* Kamera Görünümü */}
-            {cameraMode !== "none" && (
-              <View className="h-80 rounded-2xl overflow-hidden mb-6 relative">
-                <CameraView
-                  ref={cameraRef}
-                  style={{ flex: 1 }}
-                  facing="back"
-                  barcodeScannerSettings={{
-                    barcodeTypes: ["qr", "ean13", "ean8", "code128"],
-                  }}
-                  onBarcodeScanned={
-                    cameraMode === "barcode" ? handleBarcodeScanned : undefined
->>>>>>> Stashed changes
-                  }
-                />
-                <View className="absolute inset-0 bg-black/20" />
-                {cameraMode === "barcode" && (
-                  <View className="absolute inset-0 items-center justify-center">
-                    <View 
-                      className="w-64 h-64 border-2 border-white rounded-2xl"
-                      style={{ borderStyle: 'dashed' }}
-                    />
-                    <Text className="text-white text-center mt-4 font-medium">
-                      Barkodu kameraya tutun
-                    </Text>
-                  </View>
-                )}
-                {cameraMode === "photo" && (
-                  <TouchableOpacity
-                    className="absolute bottom-6 self-center w-16 h-16 rounded-full border-4 border-white items-center justify-center"
-                    style={{ backgroundColor: colors.primary }}
-                    onPress={takePhoto}
-                  >
-                    <Camera color="white" size={24} />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 items-center justify-center"
-                  onPress={() => setCameraMode("none")}
-                >
-                  <X color="white" size={20} />
-                </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 2,
+                  borderStyle: "dashed",
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceSecondary,
+                }} 
+                onPress={openPhotoCamera}
+              >
+                <CameraIcon color={colors.textMuted} size={24} />
+                <Text style={{ fontSize: 12, marginTop: 4, textAlign: "center", color: colors.textMuted }}>
+                  Ekle
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            {errors.photos && (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <AlertCircle color={colors.error} size={16} />
+                <Text style={{ marginLeft: 4, fontSize: 14, color: colors.error }}>
+                  {errors.photos}
+                </Text>
               </View>
             )}
+          </View>
+        </ScrollView>
 
-            {/* Form Fields */}
-            <InputField
-              label="Ürün Tipi"
-              value={formData.productType}
-              onChangeText={handleInputChange("productType")}
-              placeholder="Ürün tipini girin"
-              error={errors.productType}
-              required
-            />
+        {/* Action Buttons */}
+        <View 
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 24,
+            paddingTop: 16,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            paddingBottom: Math.max(16, insets.bottom + 8),
+          }}
+        >
+          <TouchableOpacity 
+            style={{
+              flex: 1,
+              paddingVertical: 16,
+              borderRadius: 12,
+              marginRight: 12,
+              alignItems: "center",
+              backgroundColor: colors.surfaceSecondary,
+            }} 
+            onPress={onCancel} 
+            disabled={isSubmitting}
+          >
+            <Text style={{ fontWeight: "500", color: colors.textSecondary }}>
+              İptal
+            </Text>
+          </TouchableOpacity>
 
-            <InputField
-              label="Bant Numarası"
-              value={formData.lineNumber}
-              onChangeText={handleInputChange("lineNumber")}
-              placeholder="Bant numarasını girin"
-              error={errors.lineNumber}
-              required
-            />
-
-            <InputField
-              label="Hata Kodu"
-              value={formData.errorCode}
-              onChangeText={handleInputChange("errorCode")}
-              placeholder="Hata kodunu girin"
-              error={errors.errorCode}
-              required
-            />
-
-            <InputField
-              label="Not"
-              value={formData.note}
-              onChangeText={handleInputChange("note")}
-              placeholder="Ek açıklama (isteğe bağlı)"
-              multiline
-            />
-
-            {/* Fotoğraflar */}
-            <View className="mb-6">
-              <View className="flex-row items-center mb-2">
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: colors.text }}
-                >
-                  Fotoğraflar
-                </Text>
-                <Text className="ml-1 text-red-500">*</Text>
-              </View>
-              
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                className="mb-2"
-                keyboardShouldPersistTaps="always"
-              >
-                {formData.photos.map((uri, idx) => (
-                  <View key={idx} className="mr-3 relative">
-                    <Image
-                      source={{ uri }}
-                      className="w-24 h-24 rounded-xl"
-                    />
-                    <TouchableOpacity
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full items-center justify-center"
-                      style={{ backgroundColor: colors.error }}
-                      onPress={() => removePhoto(idx)}
-                    >
-                      <Trash2 color="white" size={12} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                
-                <TouchableOpacity
-                  className="w-24 h-24 rounded-xl items-center justify-center border-2 border-dashed"
-                  style={{ borderColor: colors.border, backgroundColor: colors.surfaceSecondary }}
-                  onPress={openCamera("photo")}
-                >
-                  <Camera color={colors.textMuted} size={24} />
-                  <Text 
-                    className="text-xs mt-1 text-center"
-                    style={{ color: colors.textMuted }}
-                  >
-                    Ekle
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-              
-              {errors.photos && (
-                <View className="flex-row items-center">
-                  <AlertCircle color={colors.error} size={16} />
-                  <Text 
-                    className="ml-1 text-sm"
-                    style={{ color: colors.error }}
-                  >
-                    {errors.photos}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* Action Buttons (Safe bottom) */}
-          <SafeAreaView edges={['bottom']}>
-            <View 
-              className="flex-row justify-between p-6 pt-4 border-t"
-              style={{ borderTopColor: colors.border, paddingBottom: Math.max(8, insets.bottom) }}
-            >
-              <TouchableOpacity
-                className="flex-1 py-4 rounded-xl mr-3 items-center"
-                style={{ backgroundColor: colors.surfaceSecondary }}
-                onPress={onCancel}
-                disabled={isSubmitting}
-              >
-                <Text 
-                  className="font-medium"
-                  style={{ color: colors.textSecondary }}
-                >
-                  İptal
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className="flex-1 py-4 rounded-xl items-center flex-row justify-center"
-                style={{ 
-                  backgroundColor: isSubmitting ? colors.textMuted : colors.primary,
-                  opacity: isSubmitting ? 0.7 : 1
-                }}
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <Loader color={colors.primaryForeground} size={20} />
-                ) : (
-                  <Check color={colors.primaryForeground} size={20} />
-                )}
-                <Text 
-                  className="font-medium ml-2"
-                  style={{ color: colors.primaryForeground }}
-                >
-                  {isSubmitting ? "Gönderiliyor..." : "Rapor Oluştur"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
+          <TouchableOpacity 
+            style={{
+              flex: 1,
+              paddingVertical: 16,
+              borderRadius: 12,
+              alignItems: "center",
+              flexDirection: "row",
+              justifyContent: "center",
+              backgroundColor: isSubmitting ? colors.textMuted : colors.primary,
+              opacity: isSubmitting ? 0.7 : 1,
+            }} 
+            onPress={handleSubmit} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <Loader color={colors.primaryForeground} size={20} />
+            ) : (
+              <Check color={colors.primaryForeground} size={20} />
+            )}
+            <Text style={{ fontWeight: "500", marginLeft: 8, color: colors.primaryForeground }}>
+              {isSubmitting ? "Gönderiliyor..." : "Rapor Oluştur"}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
