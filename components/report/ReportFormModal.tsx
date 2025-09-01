@@ -1,5 +1,5 @@
 // components/report/ReportFormModal.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -212,6 +212,12 @@ export default function ReportFormModal({
     </View>
   );
 
+  // useCallback ile değiştirilmiş input 
+  const handleInputChange = useCallback((field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => ({ ...prev, [field]: undefined }));
+  }, []);
+
   return (
     <KeyboardAvoidingView 
       className="flex-1"
@@ -350,10 +356,7 @@ export default function ReportFormModal({
           <InputField
             label="Ürün Tipi"
             value={formData.productType}
-            onChangeText={(t) => {
-              setFormData({ ...formData, productType: t });
-              setErrors(prev => ({ ...prev, productType: undefined }));
-            }}
+            onChangeText={(t) => handleInputChange("productType", t)}
             placeholder="Ürün tipini girin"
             error={errors.productType}
             required
@@ -362,10 +365,7 @@ export default function ReportFormModal({
           <InputField
             label="Hat Numarası"
             value={formData.lineNumber}
-            onChangeText={(t) => {
-              setFormData({ ...formData, lineNumber: t });
-              setErrors(prev => ({ ...prev, lineNumber: undefined }));
-            }}
+            onChangeText={(t) => handleInputChange("lineNumber", t)}
             placeholder="Hat numarasını girin"
             error={errors.lineNumber}
             required
@@ -374,10 +374,7 @@ export default function ReportFormModal({
           <InputField
             label="Hata Kodu"
             value={formData.errorCode}
-            onChangeText={(t) => {
-              setFormData({ ...formData, errorCode: t });
-              setErrors(prev => ({ ...prev, errorCode: undefined }));
-            }}
+            onChangeText={(t) => handleInputChange("errorCode", t)}
             placeholder="Hata kodunu girin"
             error={errors.errorCode}
             required
@@ -386,7 +383,7 @@ export default function ReportFormModal({
           <InputField
             label="Not"
             value={formData.note}
-            onChangeText={(t) => setFormData({ ...formData, note: t })}
+            onChangeText={(t) => handleInputChange("note", t)}
             placeholder="Ek açıklama (isteğe bağlı)"
             multiline
           />
