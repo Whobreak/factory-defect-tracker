@@ -67,7 +67,7 @@ export let mockReports: Report[] = [
   },
 ];
 
-// 🔹 Giriş yapan kullanıcı (şimdilik Ali)
+// 🔹 Giriş yapan kullanıcı 
 export let currentUser: User = mockUsers[0];
 export function setCurrentUser(userId: number) {
   const user = mockUsers.find((u) => u.id === userId);

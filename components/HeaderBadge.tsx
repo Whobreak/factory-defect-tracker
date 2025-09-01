@@ -100,8 +100,8 @@ export default function HeaderBadge({ name, line }: Props) {
         <View className="absolute top-0 right-0 w-20 h-20 opacity-5">
           <Zap 
             color={colors.primary} 
-            size={80} 
-            style={{ transform: [{ rotate: '15deg' }] }}
+            size={64} 
+            style={{ transform: [{ rotate: '40deg' }] }}
           />
         </View>
       </View>
