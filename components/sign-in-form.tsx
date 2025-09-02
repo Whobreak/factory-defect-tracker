@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useTheme } from "~/hooks/useTheme";
 import { User, Lock } from "lucide-react-native";
 import { Image } from "expo-image";
+import Logo from "~/assets/images/sersim.svg";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -41,13 +42,7 @@ export function SignInForm() {
 
   const LogoHeader = () => (
     <View className="items-center justify-center">
-      <Image
-        source={require("~/assets/images/sersimwhite.png")}
-        style={styles.logo}
-        placeholder={{ blurhash }}
-        contentFit="contain"
-        transition={1000}
-      />
+      <Logo width={140} height={140} color={colors.text} />
       <Text
         className="text-3xl font-bold text-center mb-3 mt-6"
         style={{ color: colors.text }}

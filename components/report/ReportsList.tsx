@@ -9,7 +9,7 @@ import { RefreshControl } from 'react-native';
 
 type Props = {
   data: Report[];
-  onImagePress?: (uri: string) => void;
+  onImagePress?: (uris: string[], index: number) => void;
   refreshControl?: React.ReactElement<RefreshControlProps>;
 };
 

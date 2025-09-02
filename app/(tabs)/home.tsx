@@ -1,6 +1,6 @@
 // app/(tabs)/home.tsx - Modal kısmı düzeltildi
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, Modal, StatusBar, Dimensions, RefreshControl } from "react-native";
+import { View, Text, Modal, StatusBar, Dimensions, RefreshControl, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mockReports, currentUser, addReport, Report } from "~/lib/mock";
 import { useTheme } from "~/hooks/useTheme";
@@ -8,6 +8,7 @@ import HeaderBadge from "~/components/HeaderBadge";
 import FloatingButton from "~/components/FloatingButton";
 import ReportsList from "~/components/report/ReportsList";
 import ReportFormModal from "~/components/report/ReportFormModal";
+import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 import { flushQueueIfOnline, subscribeQueueFlush } from "~/lib/offlineQueue";
 import { BarChart3, Clock, CheckCircle2, TrendingUp } from "lucide-react-native";
 
@@ -20,6 +21,8 @@ export default function EmployeeHomeScreen() {
   );
   const [formVisible, setFormVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [previewPhotos, setPreviewPhotos] = useState<string[] | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
 
   // bağlantı değişince kuyruk boşalt
   useEffect(() => {
@@ -180,7 +183,10 @@ export default function EmployeeHomeScreen() {
 
         <ReportsList 
           data={reports} 
-          onImagePress={() => {}}
+          onImagePress={(uris: string[], index: number) => {
+            setPreviewPhotos(uris);
+            setPreviewIndex(index);
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -194,9 +200,12 @@ export default function EmployeeHomeScreen() {
         {/* DÜZELTME: Daha temiz Modal implementasyonu */}
           <Modal 
             visible={formVisible} 
-            transparent 
-            animationType="slide"
-            statusBarTranslucent
+            transparent
+            animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+            presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
+            statusBarTranslucent={Platform.OS === 'ios'}
+            onRequestClose={() => setFormVisible(false)}
+            hardwareAccelerated
           > 
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
               <View style={{ flex: 1, justifyContent: 'flex-end' }}>
@@ -210,6 +219,11 @@ export default function EmployeeHomeScreen() {
           </Modal>
 
         <FloatingButton onPress={() => setFormVisible(true)} />
+        <PhotoPreviewModal 
+          uris={previewPhotos || undefined}
+          startIndex={previewIndex}
+          onClose={() => setPreviewPhotos(null)}
+        />
       </View>
     </SafeAreaView>
   );

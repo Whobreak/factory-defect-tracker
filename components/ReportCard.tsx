@@ -14,7 +14,7 @@ import { useTheme } from "~/hooks/useTheme";
 
 type Props = {
   report: Report;
-  onImagePress: (uri: string) => void;
+  onImagePress: (uris: string[], index: number) => void;
 };
 
 export default function ReportCard({ report, onImagePress }: Props) {
@@ -182,7 +182,7 @@ export default function ReportCard({ report, onImagePress }: Props) {
             {report.photos.map((uri, index) => (
               <TouchableOpacity
                 key={index}
-                onPress={() => onImagePress(uri)}
+                onPress={() => onImagePress(report.photos, index)}
                 className="mr-2 mb-2 rounded-xl overflow-hidden border"
                 style={{ borderColor: colors.border }}
                 activeOpacity={0.8}
