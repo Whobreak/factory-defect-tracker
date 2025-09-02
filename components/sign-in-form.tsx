@@ -1,11 +1,20 @@
 import * as React from "react";
-import { type TextInput, StyleSheet, View, StatusBar, Platform, KeyboardAvoidingView } from "react-native";
+import {
+  type TextInput,
+  StyleSheet,
+  View,
+  StatusBar,
+  Platform,
+  KeyboardAvoidingView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "~/hooks/useTheme";
 import { User, Lock } from "lucide-react-native";
-import { Image } from "expo-image";
-import Logo from "~/assets/images/sersim.svg";
+
+// İki farklı logo (dark/light)
+import LogoLight from "~/assets/images/sersim-light.svg";
+import LogoDark from "~/assets/images/sersim-dark.svg";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -37,12 +46,13 @@ export function SignInForm() {
     }
   }
 
-  const blurhash =
-    "|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[";
-
   const LogoHeader = () => (
     <View className="items-center justify-center">
-      <Logo width={140} height={140} color={colors.text} />
+      {isDark ? (
+        <LogoDark width={140} height={140} />
+      ) : (
+        <LogoLight width={140} height={140} />
+      )}
       <Text
         className="text-3xl font-bold text-center mb-3 mt-6"
         style={{ color: colors.text }}
@@ -59,18 +69,20 @@ export function SignInForm() {
   );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+    >
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={colors.background}
         translucent={false}
       />
 
-      {/* Klavye açıldığında iOS için padding ekler */}
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0} 
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <View className="flex-1 px-6 justify-center">
           <View className="mb-6">
@@ -78,13 +90,13 @@ export function SignInForm() {
           </View>
 
           <Card
-            className="border-0 shadow-lg mx-auto w-full max-w-sm"
+            className="border-0 shadow-lg mx-auto w-full max-w-sm rounded-2xl"
             style={{
               backgroundColor: colors.surface,
               shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
               elevation: 8,
             }}
           >
@@ -124,7 +136,7 @@ export function SignInForm() {
                     autoCapitalize="none"
                     onSubmitEditing={onUsernameSubmitEditing}
                     returnKeyType="next"
-                    className="h-12 text-base"
+                    className="h-12 text-base rounded-xl px-4"
                     style={{
                       backgroundColor: colors.background,
                       borderColor: colors.border,
@@ -152,7 +164,7 @@ export function SignInForm() {
                     secureTextEntry
                     returnKeyType="send"
                     onSubmitEditing={onSubmit}
-                    className="h-12 text-base"
+                    className="h-12 text-base rounded-xl px-4"
                     style={{
                       backgroundColor: colors.background,
                       borderColor: colors.border,
@@ -168,8 +180,8 @@ export function SignInForm() {
                     backgroundColor: colors.primary,
                     shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
+                    shadowOpacity: 0.25,
+                    shadowRadius: 6,
                     elevation: 4,
                   }}
                   onPress={onSubmit}
@@ -180,7 +192,10 @@ export function SignInForm() {
                 </Button>
               </View>
 
-              <Separator style={{ backgroundColor: colors.border, opacity: 0.5 }} />
+              <Separator
+                className="my-4"
+                style={{ backgroundColor: colors.border, opacity: 0.5 }}
+              />
             </CardContent>
           </Card>
         </View>
