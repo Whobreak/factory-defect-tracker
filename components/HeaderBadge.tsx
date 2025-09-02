@@ -56,7 +56,7 @@ export default function HeaderBadge({ name, line }: Props) {
           </View>
         </View>
 
-        {/* Alt kısım - Hat bilgisi */}
+        {/* Alt kısım - Bant bilgisi */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
             <View 
@@ -70,7 +70,7 @@ export default function HeaderBadge({ name, line }: Props) {
                 className="text-xs opacity-70"
                 style={{ color: colors.textSecondary }}
               >
-                Çalışma Hattı
+                Çalışma Bandı
               </Text>
               <Text 
                 className={`font-semibold ${isSmallScreen ? 'text-sm' : 'text-base'}`}

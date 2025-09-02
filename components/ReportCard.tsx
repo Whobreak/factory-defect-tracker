@@ -132,7 +132,7 @@ export default function ReportCard({ report, onImagePress }: Props) {
         
         <InfoRow
           icon={MapPin}
-          label="Hat"
+          label="Bant Numarası"
           value={report.lineNumber}
         />
         

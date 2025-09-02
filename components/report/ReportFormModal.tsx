@@ -423,11 +423,11 @@ export default function ReportFormModal({
             )}
           </View>
 
-          {/* Hat Numarası */}
+          {/* Bant Numarası */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
-                Band Numarası
+                Bant Numarası
               </Text>
               <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
             </View>
@@ -443,7 +443,7 @@ export default function ReportFormModal({
                 color: colors.text,
                 height: 48,
               }}
-              placeholder="Hat numarasını girin"
+              placeholder="Bant numarasını girin"
               placeholderTextColor={colors.textMuted}
               value={formData.lineNumber}
               onChangeText={(text) => updateField("lineNumber", text)}
