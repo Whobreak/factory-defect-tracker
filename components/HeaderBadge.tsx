@@ -1,8 +1,10 @@
 // components/HeaderBadge.tsx
 import React from "react";
 import { View, Text, Dimensions } from "react-native";
-import { Building2, User, Zap } from "lucide-react-native";
+import { Building2, User } from "lucide-react-native";
 import { useTheme } from "~/hooks/useTheme";
+import LogoLight_2 from "~/sersim-light.svg";
+import LogoDark_2 from "~/sersim-dark.svg";
 
 type Props = {
   name: string;
@@ -70,7 +72,7 @@ export default function HeaderBadge({ name, line }: Props) {
                 className="text-xs opacity-70"
                 style={{ color: colors.textSecondary }}
               >
-                Çalışma Bandı
+                Çalışma Bandı 
               </Text>
               <Text 
                 className={`font-semibold ${isSmallScreen ? 'text-sm' : 'text-base'}`}
@@ -97,12 +99,12 @@ export default function HeaderBadge({ name, line }: Props) {
         </View>
 
         {/* Decorative elements */}
-        <View className="absolute top-0 right-0 w-20 h-20 opacity-5">
-          <Zap 
-            color={colors.primary} 
-            size={64} 
-            style={{ transform: [{ rotate: '40deg' }] }}
-          />
+        <View className="absolute top-2 right-4 w-20 h-20 opacity-100">
+          {isDark ? (
+            <LogoDark_2 width={80} height={80} />
+          ) : (
+            <LogoLight_2 width={80} height={80} />
+          )}
         </View>
       </View>
     </View>

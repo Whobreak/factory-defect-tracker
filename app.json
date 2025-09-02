@@ -4,7 +4,7 @@
     "slug": "factory-defect-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.svg",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,15 +19,15 @@
     "ios": {
       "supportsTablet": true,
       "splash": {
-      "image": "./assets/images/iPhone 16 Frame (1).png",
-      "resizeMode": "contain",
-      "backgroundColor": "##0f172a"
-    }
+        "image": "./assets/images/iPhone 16 Frame (1).png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0f172a"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon2.png",
-        "backgroundColor": "##0f172a"
+        "backgroundColor": "#0f172a"
       }
     },
     "web": {

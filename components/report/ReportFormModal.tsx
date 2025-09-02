@@ -22,6 +22,7 @@ import {
   Trash2
 } from "lucide-react-native";
 import { useTheme } from "~/hooks/useTheme";
+import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 
 // Ref Tipleri: useRef<TextInput | null>(null) olarak düzeltildi
 // Focus Fonksiyonu: Parametre tipi React.RefObject<TextInput | null> olarak güncellendi
@@ -73,6 +74,7 @@ export default function ReportFormModal({
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   // input refs for proper next-focus behavior
   const barcodeRef = useRef<TextInput | null>(null);
@@ -202,8 +204,8 @@ export default function ReportFormModal({
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
     >
       <View 
         style={{
@@ -549,7 +551,9 @@ export default function ReportFormModal({
             >
               {formData.photos.map((uri, idx) => (
                 <View key={idx} style={{ marginRight: 12, position: "relative" }}>
-                  <Image source={{ uri }} style={{ width: 96, height: 96, borderRadius: 12 }} />
+                  <TouchableOpacity onPress={() => setPreviewUri(uri)} activeOpacity={0.9}>
+                    <Image source={{ uri }} style={{ width: 96, height: 96, borderRadius: 12 }} />
+                  </TouchableOpacity>
                   <TouchableOpacity 
                     style={{
                       position: "absolute",
@@ -654,6 +658,8 @@ export default function ReportFormModal({
             </Text>
           </TouchableOpacity>
         </View>
+        {/* Preview Modal */}
+        <PhotoPreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
       </View>
     </KeyboardAvoidingView>
   );

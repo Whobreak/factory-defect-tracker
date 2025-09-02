@@ -1,26 +1,29 @@
 import React from "react";
-import { View, Image, Text } from "react-native";
+import ImageViewing from "react-native-image-viewing";
 
 
 type PhotoPreviewModalProps = {
-uri: string | null;
-onClose: () => void;
+  uri?: string | null;
+  uris?: string[];
+  startIndex?: number;
+  onClose: () => void;
 };
 
 
-export default function PhotoPreviewModal({ uri, onClose }: PhotoPreviewModalProps) {
-if (!uri) return null;
-
-
-return (
-<View className="flex-1 bg-black/90 justify-center items-center">
-<Image source={{ uri }} className="w-80 h-96 rounded-xl" resizeMode="contain" />
-<Text
-onPress={onClose}
-className="absolute top-10 right-5 bg-red-500 p-2 rounded-lg text-white z-50"
->
-Kapat ✖
-</Text>
-</View>
-);
+export default function PhotoPreviewModal({ uri, uris, startIndex, onClose }: PhotoPreviewModalProps) {
+  const images = uris && uris.length > 0 ? uris.map((u) => ({ uri: u })) : uri ? [{ uri }] : [];
+  const visible = images.length > 0;
+  const imageIndex = uris && typeof startIndex === 'number' ? startIndex : 0;
+  return (
+    <ImageViewing
+      images={images}
+      imageIndex={imageIndex}
+      visible={visible}
+      onRequestClose={onClose}
+      swipeToCloseEnabled
+      doubleTapToZoomEnabled
+      presentationStyle="overFullScreen"
+      animationType="fade"
+    />
+  );
 }
