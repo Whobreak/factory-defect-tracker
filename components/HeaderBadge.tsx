@@ -72,7 +72,7 @@ export default function HeaderBadge({ name, line }: Props) {
                 className="text-xs opacity-70"
                 style={{ color: colors.textSecondary }}
               >
-                Çalışma Bandı
+                Çalışma Bandı 
               </Text>
               <Text 
                 className={`font-semibold ${isSmallScreen ? 'text-sm' : 'text-base'}`}
@@ -99,12 +99,12 @@ export default function HeaderBadge({ name, line }: Props) {
         </View>
 
         {/* Decorative elements */}
-        <View className="absolute top-5 right-5 w-20 h-20 opacity-100">
-        {isDark ? (
-        <LogoDark_2 width={100} height={100} />
-      ) : (
-        <LogoLight_2 width={100} height={100} />
-      )}
+        <View className="absolute top-2 right-4 w-20 h-20 opacity-100">
+          {isDark ? (
+            <LogoDark_2 width={80} height={80} />
+          ) : (
+            <LogoLight_2 width={80} height={80} />
+          )}
         </View>
       </View>
     </View>
