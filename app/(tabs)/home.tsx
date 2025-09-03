@@ -11,18 +11,36 @@ import ReportFormModal from "~/components/report/ReportFormModal";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 import { flushQueueIfOnline, subscribeQueueFlush } from "~/lib/offlineQueue";
 import { BarChart3, Clock, CheckCircle2, TrendingUp } from "lucide-react-native";
+import { getUserName, getUserRole } from "~/lib/storage";
+import React from "react";
 
 export default function EmployeeHomeScreen() {
   const { colors, isDark } = useTheme();
   const { width } = Dimensions.get('window');
   
-  const [reports, setReports] = useState<Report[]>(
-    mockReports.filter((r) => r.userId === currentUser.id)
-  );
+  const [reports, setReports] = useState<Report[]>([]);
   const [formVisible, setFormVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [previewPhotos, setPreviewPhotos] = useState<string[] | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
+  const [username, setUsername] = React.useState("");
+  const [userRole, setUserRole] = React.useState("");
+
+  // Load username and role from storage
+  React.useEffect(() => {
+    (async () => {
+      const storedName = await getUserName();
+      const storedRole = await getUserRole();
+      if (storedName) setUsername(storedName);
+      if (storedRole) setUserRole(storedRole);
+    })();
+  }, []);
+
+  // Update reports when userRole changes
+  React.useEffect(() => {
+    const isAdmin = userRole === 'SuperAdmin';
+    setReports(isAdmin ? mockReports : mockReports.filter((r) => r.userId === currentUser.id));
+  }, [userRole]);
 
   // bağlantı değişince kuyruk boşalt
   useEffect(() => {
@@ -135,7 +153,7 @@ export default function EmployeeHomeScreen() {
       />
       
       <View className="flex-1 px-4 pt-2">
-        <HeaderBadge name={currentUser.name} line={currentUser.line} />
+        <HeaderBadge username={username} line={currentUser.line} />
 
         {/* İstatistik kartları */}
         <View className="flex-row mb-4">

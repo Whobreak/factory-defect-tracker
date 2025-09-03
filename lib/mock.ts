@@ -1,7 +1,7 @@
 // Kullanıcı Tipi
 export type User = {
   id: number;
-  name: string;
+  username: string;
   role: "worker" | "admin";
   line: string;
   password: string;
@@ -29,9 +29,9 @@ export type Report = {
 
 // 🔹 Mock Kullanıcılar
 export let mockUsers: User[] = [
-  { id: 1, name: "Harika", role: "admin", line: "A1", password: "1234" },
-  { id: 2, name: "Ayşe", role: "worker", line: "B2", password: "1234" },
-  { id: 3, name: "Admin", role: "admin", line: "", password: "admin123" },
+  { id: 1, username: "Harika", role: "admin", line: "A1", password: "1234" },
+  { id: 2, username: "Ayşe", role: "worker", line: "B2", password: "1234" },
+  { id: 3, username: "Admin", role: "admin", line: "", password: "admin123" },
 ];
 
 // 🔹 Mock Hata Kodları
@@ -84,10 +84,10 @@ export function setCurrentUser(userId: number) {
 }
 
 // 🔹 Kullanıcı işlemleri (Admin için)
-export function addUser(name: string, line: string, password: string) {
+export function addUser(username: string, line: string, password: string) {
   const newUser: User = {
     id: mockUsers.length + 1,
-    name,
+    username,
     role: "worker",
     line,
     password,

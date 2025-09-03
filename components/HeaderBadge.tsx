@@ -6,12 +6,13 @@ import { useTheme } from "~/hooks/useTheme";
 import LogoLight_2 from "~/sersim-light.svg";
 import LogoDark_2 from "~/sersim-dark.svg";
 
+
 type Props = {
-  name: string;
+  username: string;
   line: string;
 };
 
-export default function HeaderBadge({ name, line }: Props) {
+export default function HeaderBadge({ username, line }: Props) {
   const { colors, isDark } = useTheme();
   const { width } = Dimensions.get('window');
   
@@ -53,7 +54,7 @@ export default function HeaderBadge({ name, line }: Props) {
               style={{ color: colors.text }}
               numberOfLines={1}
             >
-              {name}
+              {username}
             </Text>
           </View>
         </View>

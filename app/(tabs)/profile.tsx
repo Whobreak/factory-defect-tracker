@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '~/hooks/useTheme';
 import { currentUser, mockUsers, mockErrorCodes, addUser, addErrorCode, User, ErrorCode } from '~/lib/mock';
+import { getUserRole } from '~/lib/storage';
 import LogoLight from '~/sersim-light.svg';
 import LogoDark from '~/sersim-dark.svg';
 
@@ -19,6 +20,7 @@ const ProfilePage = () => {
   
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [errorCodes, setErrorCodes] = useState<ErrorCode[]>(mockErrorCodes);
+  const [userRole, setUserRole] = useState<string>('');
   
   const [modalVisible, setModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -36,13 +38,21 @@ const ProfilePage = () => {
 
   const styles = getStyles(colors, isDark);
 
+  // Load user role from storage
+  useEffect(() => {
+    (async () => {
+      const role = await getUserRole();
+      setUserRole(role || '');
+    })();
+  }, []);
+
   // Admin kontrolü
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = userRole === 'SuperAdmin';
 
   const openModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
-      setTempName(user.name);
+      setTempName(user.username);
       setTempPassword(user.password);
       setTempRole(user.role);
       setTempBands([user.line]); // mock.ts'de line string olarak tutuluyor
@@ -87,7 +97,7 @@ const ProfilePage = () => {
       addUser(tempName, tempBands[0] || '', tempPassword);
       setUsers([...users, { 
         id: users.length + 1, 
-        name: tempName,
+        username: tempName,
         password: tempPassword,
         role: tempRole,
         line: tempBands[0] || ''
@@ -140,15 +150,24 @@ const ProfilePage = () => {
           {/* Kullanıcı Bilgileri */}
           <View style={styles.userInfoCard}>
             <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>{currentUser.name[0].toUpperCase()}</Text>
-            </View>
-            <Text style={styles.userName}>{currentUser.name}</Text>
-            <Text style={styles.userRole}>{currentUser.role === 'admin' ? 'Yönetici' : 'Çalışan'} - {currentUser.line}</Text>
+                          <Text style={styles.userAvatarText}>{currentUser.username[0].toUpperCase()}</Text>
           </View>
+          <Text style={styles.userName}>{currentUser.username}</Text>
+                      <Text style={styles.userRole}>{currentUser.role === 'admin' ? 'Yönetici' : 'Çalışan'} - {currentUser.line}</Text>
+        </View>
 
-          <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/sign-in')}>
-            <Text style={styles.logoutText}>Çıkış Yap</Text>
+        {isAdmin && (
+          <TouchableOpacity 
+            style={[styles.logoutBtn, { backgroundColor: colors.accent, marginBottom: 12 }]} 
+            onPress={() => router.push('/(tabs)/home')}
+          >
+            <Text style={styles.logoutText}>Tüm Raporları Görüntüle</Text>
           </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/sign-in')}>
+          <Text style={styles.logoutText}>Çıkış Yap</Text>
+        </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -180,10 +199,10 @@ const ProfilePage = () => {
               <View key={user.id} style={styles.userItem}>
                 <View style={styles.userInfo}>
                   <View style={styles.userAvatar}>
-                    <Text style={styles.userAvatarText}>{user.name[0].toUpperCase()}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.userName}>{user.name}</Text>
+                                      <Text style={styles.userAvatarText}>{user.username[0].toUpperCase()}</Text>
+                </View>
+                <View>
+                  <Text style={styles.userName}>{user.username}</Text>
                     <Text style={styles.userRole}>{user.role === 'admin' ? 'Yönetici' : 'Çalışan'} - {user.line}</Text>
                   </View>
                 </View>

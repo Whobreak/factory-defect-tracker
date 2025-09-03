@@ -28,21 +28,44 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Text } from "~/components/ui/text";
+import { login } from "~/lib/auth";
+import { saveUserName, getUserRole } from "~/lib/storage";
 
 export function SignInForm() {
   const { colors, isDark } = useTheme();
   const passwordInputRef = React.useRef<TextInput>(null);
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   function onUsernameSubmitEditing() {
     passwordInputRef.current?.focus();
   }
 
-  function onSubmit() {
-    const success = true;
-    if (success) {
-      router.replace("/(tabs)/home");
-    } else {
-      console.error("Login failed");
+  async function onSubmit() {
+    if (!username || !password) {
+      setError("Kullanıcı adı ve şifre gereklidir");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await login({ username, password });
+      await saveUserName(username);
+      
+      // Role-based routing
+      const role = await getUserRole();
+      if (role === 'SuperAdmin') {
+        router.replace("/(tabs)/profile");
+      } else {
+        router.replace("/(tabs)/home");
+      }
+    } catch (e: any) {
+      const message = e?.response?.data?.message || e?.message || "Giriş başarısız";
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -134,6 +157,8 @@ export function SignInForm() {
                     placeholder="Mehmet Yılmaz"
                     autoComplete="username"
                     autoCapitalize="none"
+                    value={username}
+                    onChangeText={setUsername}
                     onSubmitEditing={onUsernameSubmitEditing}
                     returnKeyType="next"
                     className="h-12 text-base rounded-xl px-4"
@@ -163,6 +188,8 @@ export function SignInForm() {
                     placeholder="••••••••"
                     secureTextEntry
                     returnKeyType="send"
+                    value={password}
+                    onChangeText={setPassword}
                     onSubmitEditing={onSubmit}
                     className="h-12 text-base rounded-xl px-4"
                     style={{
@@ -172,6 +199,12 @@ export function SignInForm() {
                     }}
                   />
                 </View>
+
+                {error ? (
+                  <Text className="text-center" style={{ color: colors.error }}>
+                    {error}
+                  </Text>
+                ) : null}
 
                 {/* Button */}
                 <Button
@@ -185,9 +218,10 @@ export function SignInForm() {
                     elevation: 4,
                   }}
                   onPress={onSubmit}
+                  disabled={loading}
                 >
                   <Text className="text-lg font-bold" style={{ color: "white" }}>
-                    Devam Et
+                    {loading ? "Giriş yapılıyor..." : "Devam Et"}
                   </Text>
                 </Button>
               </View>
