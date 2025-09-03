@@ -64,11 +64,20 @@ export default function ReportFormModal({
   const insets = useSafeAreaInsets();
   const [errorQuery, setErrorQuery] = useState("");
   const [isErrorListOpen, setIsErrorListOpen] = useState(false);
-  const filteredErrors = mockErrorCodes.filter(e => {
-    const q = errorQuery.trim().toLowerCase();
-    if (!q) return true;
-    return e.code.toLowerCase().includes(q) || e.description.toLowerCase().includes(q);
-  });
+  const [filteredErrors, setFilteredErrors] = useState(mockErrorCodes);
+  
+  // Filtreleme fonksiyonu - her çağrıldığında güncel sonuçları döndürür
+  const updateFilteredErrors = (query: string) => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      setFilteredErrors(mockErrorCodes); // Boş sorgu ise tüm hata kodlarını göster
+    } else {
+      const filtered = mockErrorCodes.filter(e => 
+        e.code.toLowerCase().includes(q) || e.description.toLowerCase().includes(q)
+      );
+      setFilteredErrors(filtered);
+    }
+  };
 
   const [formData, setFormData] = useState({
     barcode: "",
@@ -507,15 +516,17 @@ export default function ReportFormModal({
                 placeholderTextColor={colors.textMuted}
                 value={errorQuery || formData.errorCode}
                 onChangeText={(text) => {
+                  // Her karakter değişikliğinde (ekleme/silme) filtreleme güncellenir
                   setErrorQuery(text);
+                  updateFilteredErrors(text); // Filtrelemeyi hemen güncelle
                   setIsErrorListOpen(true);
+                  // Eğer input boşsa, seçili hata kodunu da temizle
                   if (!text) updateField("errorCode", "");
                 }}
                 onFocus={() => setIsErrorListOpen(true)}
                 autoCorrect={false}
                 returnKeyType="next"
                 onSubmitEditing={() => focusNext(noteRef)}
-                blurOnSubmit={false}
               />
               {isErrorListOpen && (
                 <>
@@ -592,7 +603,7 @@ export default function ReportFormModal({
                             }}
                           >
                             {/* Hata kodu ve açıklamasını göster */}
-                            <Text style={{ padding: 12, color: colors.text }}>{`${e.code} — ${e.description}`}</Text>
+                            <Text style={{ padding: 12, color: colors.text }}>{`${e.code} - ${e.description}`}</Text>
                           </TouchableOpacity>
                         ))
                       )}
