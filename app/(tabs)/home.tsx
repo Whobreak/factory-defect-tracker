@@ -195,8 +195,8 @@ export default function EmployeeHomeScreen() {
           <Modal 
             visible={formVisible} 
             transparent 
-            animationType="slide"
-            statusBarTranslucent
+            //animationType="slide"
+            //statusBarTranslucent
           > 
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
               <View style={{ flex: 1, justifyContent: 'flex-end' }}>

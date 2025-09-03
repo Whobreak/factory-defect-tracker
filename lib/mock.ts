@@ -39,6 +39,15 @@ export let mockErrorCodes: ErrorCode[] = [
   { id: 1, code: "E101", description: "Yüzey Çizik" },
   { id: 2, code: "E205", description: "Lehim Hatası" },
   { id: 3, code: "E309", description: "Montaj Eksik" },
+  { id: 4, code: "E102", description: "Nakliye Hasarı" },
+  { id: 5, code: "E201", description: "Elektrik aksan hatası" },
+  { id: 6, code: "E303", description: "Elektronik aksan hatası" },
+  { id: 7, code: "E106", description: "Sol arka ayak kırık" },
+  { id: 8, code: "E206", description: "Sağ arka ayak kırık" },
+  { id: 9, code: "E306", description: "Sol ön ayak kırık" },
+  { id: 10, code: "E107", description: "Sağ ön ayak kırık" },
+  { id: 11, code: "E207", description: "Üst menteşe kırık" },
+  { id: 12, code: "E307", description: "Alt menteşe kırık" },
 ];
 
 // 🔹 Mock Raporlar
