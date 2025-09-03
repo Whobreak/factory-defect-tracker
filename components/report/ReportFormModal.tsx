@@ -258,12 +258,19 @@ export default function ReportFormModal({
           </TouchableOpacity>
         </View>
 
+        {/* 
+          Ana ScrollView: Form içeriğini kaydırılabilir hale getirir
+          nestedScrollEnabled: Dropdown ScrollView ile çakışmayı önler
+          keyboardShouldPersistTaps: Klavye açıkken dropdown'a tıklanabilir olmasını sağlar
+          keyboardDismissMode: Kaydırırken klavyeyi kapatır
+        */}
         <ScrollView 
           style={{ flex: 1, paddingHorizontal: 24 }}
           contentContainerStyle={{ paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled" // DÜZELTME: Klavye davranışı
+          keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
+          nestedScrollEnabled={true} // Dropdown ScrollView ile çakışmayı önle
         >
           {/* Barkod */}
           <View style={{ marginBottom: 16, marginTop: 16 }}>
@@ -511,39 +518,87 @@ export default function ReportFormModal({
                 blurOnSubmit={false}
               />
               {isErrorListOpen && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 52,
-                    left: 0,
-                    right: 0,
-                    maxHeight: 260,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surfaceSecondary,
-                    zIndex: 1000,
-                  }}
-                >
-                  <ScrollView keyboardShouldPersistTaps="handled">
-                    {filteredErrors.length === 0 ? (
-                      <Text style={{ padding: 12, color: colors.textMuted }}>Sonuç yok</Text>
-                    ) : (
-                      filteredErrors.map((e) => (
-                        <TouchableOpacity
-                          key={e.id}
-                          onPress={() => {
-                            updateField("errorCode", e.code);
-                            setErrorQuery(`${e.code} — ${e.description}`);
-                            setIsErrorListOpen(false);
-                          }}
-                        >
-                          <Text style={{ padding: 12, color: colors.text }}>{`${e.code} — ${e.description}`}</Text>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </ScrollView>
-                </View>
+                <>
+                  {/* 
+                    Overlay: Dropdown dışına tıklandığında kapanması için 
+                    Görünmez bir TouchableOpacity ile tüm ekranı kaplar
+                    zIndex dropdown'dan düşük olmalı ki dropdown'a tıklanabilsin
+                  */}
+                  <TouchableOpacity
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: -24, // Padding'i telafi etmek için
+                      right: -24, // Padding'i telafi etmek için
+                      bottom: -1000, // Ekranın altına kadar uzat
+                      zIndex: 9998, // Dropdown'dan düşük z-index
+                    }}
+                    activeOpacity={1} // Görsel geri bildirim olmasın
+                    onPress={() => setIsErrorListOpen(false)} // Dropdown'ı kapat
+                  />
+                  
+                  {/* 
+                    Dropdown Container: Hata kodu listesini içeren ana container
+                    Absolute positioning ile input'un altında konumlandırılır
+                    Yüksek z-index ile diğer elementlerin üstünde görünür
+                  */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 52, // Input'un hemen altında
+                      left: 0,
+                      right: 0,
+                      maxHeight: 260, // Maksimum yükseklik sınırı
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surfaceSecondary,
+                      zIndex: 9999, // En üstte görünmesi için yüksek z-index
+
+                    }}
+                  >
+                    {/* 
+                      ScrollView: Hata kodlarının listesini kaydırılabilir hale getirir
+                      nestedScrollEnabled: Ana ScrollView ile çakışmayı önler
+                      keyboardShouldPersistTaps: Klavye açıkken de tıklanabilir olmasını sağlar
+                      showsVerticalScrollIndicator: Kaydırma çubuğunu gösterir
+                    */}
+                    <ScrollView 
+                      style={{ maxHeight: 260 }} // Container ile aynı yükseklik
+                      showsVerticalScrollIndicator={true} // Kaydırma çubuğunu göster
+                      nestedScrollEnabled={true} // Ana ScrollView ile çakışmayı önle
+                      keyboardShouldPersistTaps="always" // Klavye açıkken de tıklanabilir
+                    >
+                      {/* Sonuç yoksa gösterilecek mesaj */}
+                      {filteredErrors.length === 0 ? (
+                        <Text style={{ padding: 12, color: colors.textMuted }}>Sonuç yok</Text>
+                      ) : (
+                        /* Filtrelenmiş hata kodlarını listele */
+                        filteredErrors.map((e) => (
+                          <TouchableOpacity
+                            key={e.id}
+                            onPress={() => {
+                              // Hata kodu seçildiğinde form verisini güncelle
+                              updateField("errorCode", e.code);
+                              // Input'a seçilen hata kodunu ve açıklamasını yaz
+                              setErrorQuery(`${e.code} — ${e.description}`);
+                              // Dropdown'ı kapat
+                              setIsErrorListOpen(false);
+                            }}
+                            style={{
+                              // Her öğe arasında ayırıcı çizgi
+                              borderBottomWidth: 1,
+                              borderBottomColor: colors.border,
+                            }}
+                          >
+                            {/* Hata kodu ve açıklamasını göster */}
+                            <Text style={{ padding: 12, color: colors.text }}>{`${e.code} — ${e.description}`}</Text>
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                </>
               )}
             </View>
 
