@@ -557,6 +557,36 @@ export default function ReportFormModal({
             )}
           </View>
 
+          {/* Not */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
+                Not
+              </Text>
+            </View>
+
+            <TextInput
+              ref={noteRef}
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "transparent",
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                height: 96,
+                textAlignVertical: "top",
+              }}
+              placeholder="Ek açıklama (isteğe bağlı)"
+              placeholderTextColor={colors.textMuted}
+              value={formData.note}
+              onChangeText={(text) => updateField("note", text)}
+              multiline
+              returnKeyType="default"
+              blurOnSubmit={true}
+            />
+          </View>
+
 
           {/* Fotoğraflar */}
           <View style={{ marginBottom: 24 }}>
