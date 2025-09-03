@@ -53,8 +53,8 @@ export default function HeaderBadge({ username, line }: Props) {
               className={`font-bold ${isSmallScreen ? 'text-lg' : 'text-xl'}`}
               style={{ color: colors.text }}
               numberOfLines={1}
-            >
-              {username}
+            >  {username}
+            
             </Text>
           </View>
         </View>

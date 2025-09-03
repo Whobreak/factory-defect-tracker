@@ -2,7 +2,7 @@
 export type User = {
   id: number;
   username: string;
-  role: "worker" | "admin";
+  role: "user" | "admin";
   line: string;
   password: string;
 };
@@ -30,7 +30,7 @@ export type Report = {
 // 🔹 Mock Kullanıcılar
 export let mockUsers: User[] = [
   { id: 1, username: "Harika", role: "admin", line: "A1", password: "1234" },
-  { id: 2, username: "Ayşe", role: "worker", line: "B2", password: "1234" },
+  { id: 2, username: "Ayşe", role: "user", line: "B2", password: "1234" },
   { id: 3, username: "Admin", role: "admin", line: "", password: "admin123" },
 ];
 
@@ -88,7 +88,7 @@ export function addUser(username: string, line: string, password: string) {
   const newUser: User = {
     id: mockUsers.length + 1,
     username,
-    role: "worker",
+    role: "user",
     line,
     password,
   };

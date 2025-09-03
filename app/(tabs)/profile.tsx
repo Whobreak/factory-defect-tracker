@@ -30,7 +30,7 @@ const ProfilePage = () => {
   
   const [tempName, setTempName] = useState('');
   const [tempPassword, setTempPassword] = useState('');
-  const [tempRole, setTempRole] = useState<'admin' | 'worker'>('worker');
+  const [tempRole, setTempRole] = useState<'admin' | 'user'>('user');
   const [tempBands, setTempBands] = useState<string[]>([]);
   
   const [tempErrorCode, setTempErrorCode] = useState('');
@@ -60,7 +60,7 @@ const ProfilePage = () => {
       setEditingUser(null);
       setTempName('');
       setTempPassword('');
-      setTempRole('worker');
+      setTempRole('user');
       setTempBands([]);
     }
     setModalVisible(true);
@@ -268,8 +268,8 @@ const ProfilePage = () => {
 
             <Text style={styles.label}>Rol:</Text>
             <View style={styles.roleContainer}>
-              <TouchableOpacity style={[styles.roleBtn, tempRole === 'worker' && styles.roleBtnSelected]} onPress={() => setTempRole('worker')}>
-                <Text style={[styles.roleText, tempRole === 'worker' && styles.roleTextSelected]}>Çalışan</Text>
+              <TouchableOpacity style={[styles.roleBtn, tempRole === 'user' && styles.roleBtnSelected]} onPress={() => setTempRole('user')}>
+                <Text style={[styles.roleText, tempRole === 'user' && styles.roleTextSelected]}>Çalışan</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.roleBtn, tempRole === 'admin' && styles.roleBtnSelected]} onPress={() => setTempRole('admin')}>
                 <Text style={[styles.roleText, tempRole === 'admin' && styles.roleTextSelected]}>Yönetici</Text>
