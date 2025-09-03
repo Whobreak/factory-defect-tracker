@@ -24,6 +24,10 @@ import {
 import { useTheme } from "~/hooks/useTheme";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 
+import { mockErrorCodes } from "~/lib/mock"; 
+// Kendi hata kodu arama durumu ile canlı filtreleme yapacağız
+
+
 // Ref Tipleri: useRef<TextInput | null>(null) olarak düzeltildi
 // Focus Fonksiyonu: Parametre tipi React.RefObject<TextInput | null> olarak güncellendi
 // Null Safety: ?. operatörü ile null kontrolleri korundu
@@ -58,6 +62,13 @@ export default function ReportFormModal({
 }: ReportFormModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const [errorQuery, setErrorQuery] = useState("");
+  const [isErrorListOpen, setIsErrorListOpen] = useState(false);
+  const filteredErrors = mockErrorCodes.filter(e => {
+    const q = errorQuery.trim().toLowerCase();
+    if (!q) return true;
+    return e.code.toLowerCase().includes(q) || e.description.toLowerCase().includes(q);
+  });
 
   const [formData, setFormData] = useState({
     barcode: "",
@@ -473,27 +484,68 @@ export default function ReportFormModal({
               </Text>
               <Text style={{ marginLeft: 4, color: "#ef4444" }}>*</Text>
             </View>
-
-            <TextInput
-              ref={errorCodeRef}
-              style={{
-                padding: 16,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: errors.errorCode ? "#f87171" : "transparent",
-                backgroundColor: colors.surfaceSecondary,
-                color: colors.text,
-                height: 48,
-              }}
-              placeholder="Hata kodunu girin"
-              placeholderTextColor={colors.textMuted}
-              value={formData.errorCode}
-              onChangeText={(text) => updateField("errorCode", text)}
-              returnKeyType="next"
-              onSubmitEditing={() => focusNext(noteRef)}
-              blurOnSubmit={false}
-              autoCorrect={false}
-            />
+            <View style={{ position: "relative" }}>
+              <TextInput
+                ref={errorCodeRef}
+                style={{
+                  padding: 16,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: errors.errorCode ? "#f87171" : "transparent",
+                  backgroundColor: colors.surfaceSecondary,
+                  color: colors.text,
+                  height: 48,
+                }}
+                placeholder="Hata kodu ara veya seç"
+                placeholderTextColor={colors.textMuted}
+                value={errorQuery || formData.errorCode}
+                onChangeText={(text) => {
+                  setErrorQuery(text);
+                  setIsErrorListOpen(true);
+                  if (!text) updateField("errorCode", "");
+                }}
+                onFocus={() => setIsErrorListOpen(true)}
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => focusNext(noteRef)}
+                blurOnSubmit={false}
+              />
+              {isErrorListOpen && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 52,
+                    left: 0,
+                    right: 0,
+                    maxHeight: 260,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceSecondary,
+                    zIndex: 1000,
+                  }}
+                >
+                  <ScrollView keyboardShouldPersistTaps="handled">
+                    {filteredErrors.length === 0 ? (
+                      <Text style={{ padding: 12, color: colors.textMuted }}>Sonuç yok</Text>
+                    ) : (
+                      filteredErrors.map((e) => (
+                        <TouchableOpacity
+                          key={e.id}
+                          onPress={() => {
+                            updateField("errorCode", e.code);
+                            setErrorQuery(`${e.code} — ${e.description}`);
+                            setIsErrorListOpen(false);
+                          }}
+                        >
+                          <Text style={{ padding: 12, color: colors.text }}>{`${e.code} — ${e.description}`}</Text>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
 
             {errors.errorCode && (
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
@@ -505,35 +557,6 @@ export default function ReportFormModal({
             )}
           </View>
 
-          {/* Not */}
-          <View style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.text }}>
-                Not
-              </Text>
-            </View>
-
-            <TextInput
-              ref={noteRef}
-              style={{
-                padding: 16,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "transparent",
-                backgroundColor: colors.surfaceSecondary,
-                color: colors.text,
-                height: 96,
-                textAlignVertical: "top",
-              }}
-              placeholder="Ek açıklama (isteğe bağlı)"
-              placeholderTextColor={colors.textMuted}
-              value={formData.note}
-              onChangeText={(text) => updateField("note", text)}
-              multiline
-              returnKeyType="default"
-              blurOnSubmit={true}
-            />
-          </View>
 
           {/* Fotoğraflar */}
           <View style={{ marginBottom: 24 }}>
