@@ -1,6 +1,6 @@
 import React from "react";
 import { TouchableOpacity, Text, View } from "react-native";
-import { ErrorCode } from "~/lib/mock";
+import { ErrorCode } from "~/services/mock";
 
 type Props = {
   error: ErrorCode;

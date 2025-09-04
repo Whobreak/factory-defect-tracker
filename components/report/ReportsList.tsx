@@ -2,7 +2,7 @@
 import React from "react";
 import { FlatList, View, Text, Dimensions, RefreshControlProps  } from "react-native";
 import { FileText, Inbox } from "lucide-react-native";
-import { Report } from "~/lib/mock";
+import { Report } from "~/services/mock";
 import { useTheme } from "~/hooks/useTheme";
 import ReportCard from "~/components/ReportCard";
 import { RefreshControl } from 'react-native';

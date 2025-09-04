@@ -5,7 +5,10 @@ const BASE_URL = 'https://api2.sersim.com.tr/api';
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 20000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
 });
 
 export function setAuthToken(token?: string) {
@@ -19,6 +22,10 @@ export function setAuthToken(token?: string) {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Normalize axios RN network errors
+    if (err?.message === 'Network Error' && !err?.response) {
+      err.message = 'Network Error: Sunucuya ulaşılamadı (SSL/CORS/DNS).';
+    }
     return Promise.reject(err);
   }
 );

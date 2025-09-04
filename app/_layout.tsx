@@ -7,7 +7,7 @@ import * as React from 'react';
 import { Appearance, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NAV_THEME } from '~/lib/constants';
-import { initAuthFromStorage } from '~/lib/auth';
+import { initAuthFromStorage } from '~/services/auth';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
 import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';

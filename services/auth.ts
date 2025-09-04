@@ -1,5 +1,5 @@
-import { api, setAuthToken } from './api';
-import { saveAccessToken, clearAccessToken, getAccessToken, saveUserRole, clearUserRole } from './storage';
+import { api, setAuthToken } from '../services/api';
+import { saveAccessToken, clearAccessToken, getAccessToken, saveUserRole, clearUserRole } from '~/services/storage';
 
 type LoginPayload = {
   username: string;
@@ -13,7 +13,10 @@ type LoginResponse = {
 };
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('Users/login', payload);
+  // Use absolute path to avoid baseURL double slash edge-cases
+  const { data } = await api.post<LoginResponse>('/Users/login', payload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
 
   if (data?.token) {
     await saveAccessToken(data.token);

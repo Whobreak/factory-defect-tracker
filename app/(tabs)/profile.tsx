@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '~/hooks/useTheme';
-import { currentUser, mockUsers, mockErrorCodes, addUser, addErrorCode, User, ErrorCode } from '~/lib/mock';
-import { getUserRole } from '~/lib/storage';
+import { currentUser, mockUsers, mockErrorCodes, addUser, addErrorCode, User, ErrorCode } from '~/services/mock';
+import { getUserRole } from '~/services/storage';
 import LogoLight from '~/sersim-light.svg';
 import LogoDark from '~/sersim-dark.svg';
 

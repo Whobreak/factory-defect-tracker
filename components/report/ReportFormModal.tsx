@@ -24,7 +24,7 @@ import {
 import { useTheme } from "~/hooks/useTheme";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 
-import { mockErrorCodes } from "~/lib/mock"; 
+import { mockErrorCodes } from "~/services/mock"; 
 // Kendi hata kodu arama durumu ile canlı filtreleme yapacağız
 
 

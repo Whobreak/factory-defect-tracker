@@ -28,8 +28,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Text } from "~/components/ui/text";
-import { login } from "~/lib/auth";
-import { saveUserName, getUserRole } from "~/lib/storage";
+import { login } from "~/services/auth";
+import { saveUserName, getUserRole } from "~/services/storage";
 
 export function SignInForm() {
   const { colors, isDark } = useTheme();

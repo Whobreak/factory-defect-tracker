@@ -1,7 +1,7 @@
 // lib/offlineQueue.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import { addReport, Report, currentUser } from "~/lib/mock";
+import { addReport, Report, currentUser } from "~/services/mock";
 
 type EnqueuedReport = {
   tempId: string;

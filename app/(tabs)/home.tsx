@@ -2,16 +2,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Modal, StatusBar, Dimensions, RefreshControl, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { mockReports, currentUser, addReport, Report } from "~/lib/mock";
+import { mockReports, currentUser, addReport, Report } from "~/services/mock";
+import { fetchForms, mapFormToReport, createForm, uploadPhotos } from "~/services/forms";
 import { useTheme } from "~/hooks/useTheme";
 import HeaderBadge from "~/components/HeaderBadge";
 import FloatingButton from "~/components/FloatingButton";
 import ReportsList from "~/components/report/ReportsList";
 import ReportFormModal from "~/components/report/ReportFormModal";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
-import { flushQueueIfOnline, subscribeQueueFlush } from "~/lib/offlineQueue";
+import { flushQueueIfOnline, subscribeQueueFlush } from "~/services/offlineQueue";
 import { BarChart3, Clock, CheckCircle2, TrendingUp } from "lucide-react-native";
-import { getUserName, getUserRole } from "~/lib/storage";
+import { getUserName, getUserRole } from "~/services/storage";
 import React from "react";
 
 export default function EmployeeHomeScreen() {
@@ -36,11 +37,19 @@ export default function EmployeeHomeScreen() {
     })();
   }, []);
 
-  // Update reports when userRole changes
+  // Fetch reports from API
   React.useEffect(() => {
-    const isAdmin = userRole === 'SuperAdmin';
-    setReports(isAdmin ? mockReports : mockReports.filter((r) => r.userId === currentUser.id));
-  }, [userRole]);
+    (async () => {
+      try {
+        const forms = await fetchForms();
+        const mapped = forms.map(mapFormToReport);
+        setReports(mapped);
+      } catch (e) {
+        // fallback to mock if api fails
+        setReports(mockReports);
+      }
+    })();
+  }, []);
 
   // bağlantı değişince kuyruk boşalt
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function EmployeeHomeScreen() {
   // istatistikler
   const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const { todayCount, totalCount, weekCount } = useMemo(() => {
-    const mine = mockReports.filter((r) => r.userId === currentUser.id);
+    const mine = reports;
     const tCount = mine.length;
     const dCount = mine.filter((r) => r.createdAt.slice(0, 10) === todayISO).length;
     
@@ -80,20 +89,52 @@ export default function EmployeeHomeScreen() {
     note?: string;
     photos: string[];
   }) {
-    const newReport: Report = {
-      id: Date.now(),
-      barcode: values.barcode,
-      productType: values.productType,
-      lineNumber: values.lineNumber,
-      errorCode: values.errorCode,
-      note: values.note || "",
-      photos: values.photos,
-      createdAt: new Date().toISOString(),
-      userId: currentUser.id,
-    };
-    addReport(newReport);
-    setReports((prev) => [newReport, ...prev]);
-    setFormVisible(false);
+    (async () => {
+      try {
+        // 1) Create Form
+        const created = await createForm({
+          code: values.barcode,
+          type: values.productType,
+          name: values.productType,
+          productError: values.note || null,
+          errorCodeId: values.errorCode?.id ?? null,
+          // If you have lineId, map from lineNumber; else backend should infer
+          formDate: new Date().toISOString(),
+        });
+
+        // 2) Upload photos if required by backend
+        if (values.photos && values.photos.length > 0) {
+          // Convert file path images to base64 if needed. If you already have base64 strings, pass directly.
+          // Here we assume photos[] already hold base64 strings. If they are file URIs, we need to convert.
+          await uploadPhotos({
+            serialNumber: values.barcode,
+            base64Images: values.photos,
+            lengthUnit: undefined,
+          });
+        }
+
+        // 3) Update list – refetch or prepend
+        const mapped = mapFormToReport(created);
+        setReports((prev) => [mapped, ...prev]);
+        setFormVisible(false);
+      } catch (e) {
+        // fallback local add
+        const newReport: Report = {
+          id: Date.now(),
+          barcode: values.barcode,
+          productType: values.productType,
+          lineNumber: values.lineNumber,
+          errorCode: values.errorCode,
+          note: values.note || "",
+          photos: values.photos,
+          createdAt: new Date().toISOString(),
+          userId: currentUser.id,
+        };
+        addReport(newReport);
+        setReports((prev) => [newReport, ...prev]);
+        setFormVisible(false);
+      }
+    })();
   };
 
   const StatCard = ({ 

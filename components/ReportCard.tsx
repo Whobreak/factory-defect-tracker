@@ -9,7 +9,7 @@ import {
   MessageCircle,
   Camera
 } from "lucide-react-native";
-import { Report } from "~/lib/mock";
+import { Report } from "~/services/mock";
 import { useTheme } from "~/hooks/useTheme";
 
 type Props = {
