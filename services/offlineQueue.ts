@@ -1,7 +1,9 @@
 // lib/offlineQueue.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
-import { addReport, Report, currentUser } from "~/services/mock";
+import { Report } from "~/services/mock";
+import { getUserName, getUserRole } from "~/services/storage";
+import { createFormWithPhotos } from "~/services/forms";
 
 type EnqueuedReport = {
   tempId: string;
@@ -12,6 +14,7 @@ type EnqueuedReport = {
     errorCode: any;
     note?: string;
     photos: string[];
+    userId: number;
   };
   createdAtISO: string;
 };
@@ -27,7 +30,7 @@ async function setQueue(q: EnqueuedReport[]) {
   await AsyncStorage.setItem(KEY, JSON.stringify(q));
 }
 
-export async function enqueueReportIfOffline(payload: EnqueuedReport["payload"]): Promise<boolean> {
+export async function enqueueReportIfOffline(payload: Omit<EnqueuedReport["payload"], "userId">): Promise<boolean> {
   const state = await NetInfo.fetch();
   const isOnline = !!state.isConnected && !!state.isInternetReachable;
 
@@ -36,10 +39,17 @@ export async function enqueueReportIfOffline(payload: EnqueuedReport["payload"])
     return false;
   }
 
+  // Kullanıcı ID'sini role'den belirle
+  const userRole = await getUserRole();
+  const userId = userRole === 'SuperAdmin' ? 1 : 2; // Admin: 1, User: 2
+
   const q = await getQueue();
   q.push({
     tempId: `tmp_${Date.now()}`,
-    payload,
+    payload: {
+      ...payload,
+      userId: userId,
+    },
     createdAtISO: new Date().toISOString(),
   });
   await setQueue(q);
@@ -57,21 +67,21 @@ export async function flushQueueIfOnline() {
   const remaining: EnqueuedReport[] = [];
   for (const item of q) {
     try {
-      // Burayı gerçek API çağrısına değiştir (Swagger client):
-      // await api.reports.create(item.payload)
-      const newReport: Report = {
-        id: Date.now(),
-        barcode: item.payload.barcode,
-        productType: item.payload.productType,
-        lineNumber: item.payload.lineNumber,
-        errorCode: item.payload.errorCode,
-        note: item.payload.note,
-        photos: item.payload.photos,
-        createdAt: item.createdAtISO, // kuyruklandığı an
-        userId: currentUser.id,
+      // Gerçek API çağrısı yap
+      const submissionData = {
+        code: item.payload.barcode,
+        type: item.payload.productType,
+        name: item.payload.productType,
+        productError: item.payload.note,
+        quantity: 1,
+        lineId: 1, // Line ID'yi API'den al
+        errorCodeId: item.payload.errorCode.id,
       };
-      addReport(newReport);
+
+      await createFormWithPhotos(submissionData, item.payload.photos);
+      console.log('Offline queue item processed successfully:', item.tempId);
     } catch (e) {
+      console.error('Failed to process offline item:', e);
       // başarısız olanları kuyrukta tut
       remaining.push(item);
     }

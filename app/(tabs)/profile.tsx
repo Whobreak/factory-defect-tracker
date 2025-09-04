@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput,
 import { useRouter } from 'expo-router';
 import { useTheme } from '~/hooks/useTheme';
 import { currentUser, mockUsers, mockErrorCodes, addUser, addErrorCode, User, ErrorCode } from '~/services/mock';
-import { getUserRole } from '~/services/storage';
+import { getUserRole, getUserName, getUserLine } from '~/services/storage';
 import LogoLight from '~/sersim-light.svg';
 import LogoDark from '~/sersim-dark.svg';
 
@@ -21,6 +21,8 @@ const ProfilePage = () => {
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [errorCodes, setErrorCodes] = useState<ErrorCode[]>(mockErrorCodes);
   const [userRole, setUserRole] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
+  const [userLine, setUserLine] = useState<string>('');
   
   const [modalVisible, setModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -38,16 +40,20 @@ const ProfilePage = () => {
 
   const styles = getStyles(colors, isDark);
 
-  // Load user role from storage
+  // Load user role, username and line from storage
   useEffect(() => {
     (async () => {
       const role = await getUserRole();
+      const name = await getUserName();
+      const line = await getUserLine();
       setUserRole(role || '');
+      setUsername(name || '');
+      setUserLine(line || '');
     })();
   }, []);
 
   // Admin kontrolü
-  const isAdmin = userRole === 'Admin';
+  const isAdmin = userRole === 'SuperAdmin';
 
   const openModal = (user?: User) => {
     if (user) {
@@ -150,11 +156,11 @@ const ProfilePage = () => {
           {/* Kullanıcı Bilgileri */}
           <View style={styles.userInfoCard}>
             <View style={styles.userAvatar}>
-                          <Text style={styles.userAvatarText}>{currentUser.username[0].toUpperCase()}</Text>
+              <Text style={styles.userAvatarText}>{username[0]?.toUpperCase() || 'U'}</Text>
+            </View>
+            <Text style={styles.userName}>{username || 'Kullanıcı'}</Text>
+            <Text style={styles.userRole}>{userRole === 'SuperAdmin' ? 'Yönetici' : 'Çalışan'} - {userLine || 'Bant Yok'}</Text>
           </View>
-          <Text style={styles.userName}>{currentUser.username}</Text>
-                      <Text style={styles.userRole}>{currentUser.role === 'admin' ? 'Yönetici' : 'Çalışan'} - {currentUser.line}</Text>
-        </View>
 
         {isAdmin && (
           <TouchableOpacity 

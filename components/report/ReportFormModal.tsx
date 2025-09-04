@@ -24,8 +24,7 @@ import {
 import { useTheme } from "~/hooks/useTheme";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 
-import { mockErrorCodes } from "~/services/mock"; 
-// Kendi hata kodu arama durumu ile canlı filtreleme yapacağız
+import { fetchErrorCodes, ErrorCodeDto } from "~/services/forms";
 
 
 // Ref Tipleri: useRef<TextInput | null>(null) olarak düzeltildi
@@ -64,16 +63,34 @@ export default function ReportFormModal({
   const insets = useSafeAreaInsets();
   const [errorQuery, setErrorQuery] = useState("");
   const [isErrorListOpen, setIsErrorListOpen] = useState(false);
-  const [filteredErrors, setFilteredErrors] = useState(mockErrorCodes);
+  const [errorCodes, setErrorCodes] = useState<ErrorCodeDto[]>([]);
+  const [filteredErrors, setFilteredErrors] = useState<ErrorCodeDto[]>([]);
   
+  // API'den hata kodlarını yükle
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const codes = await fetchErrorCodes();
+        setErrorCodes(codes);
+        setFilteredErrors(codes);
+      } catch (error) {
+        console.error('Hata kodları yüklenemedi:', error);
+        // Fallback: boş array
+        setErrorCodes([]);
+        setFilteredErrors([]);
+      }
+    })();
+  }, []);
+
   // Filtreleme fonksiyonu - her çağrıldığında güncel sonuçları döndürür
   const updateFilteredErrors = (query: string) => {
     const q = query.trim().toLowerCase();
     if (!q) {
-      setFilteredErrors(mockErrorCodes); // Boş sorgu ise tüm hata kodlarını göster
+      setFilteredErrors(errorCodes); // Boş sorgu ise tüm hata kodlarını göster
     } else {
-      const filtered = mockErrorCodes.filter(e => 
-        e.code.toLowerCase().includes(q) || e.description.toLowerCase().includes(q)
+      const filtered = errorCodes.filter(e => 
+        (e.code?.toLowerCase().includes(q) || false) || 
+        (e.description?.toLowerCase().includes(q) || false)
       );
       setFilteredErrors(filtered);
     }
@@ -83,7 +100,7 @@ export default function ReportFormModal({
     barcode: "",
     productType: "",
     lineNumber: initialLineNumber || "",
-    errorCode: "",
+    errorCode: null as any, // Hata kodu objesi olarak saklanacak
     note: "",
     photos: [] as string[],
   });
@@ -121,7 +138,7 @@ export default function ReportFormModal({
       newErrors.lineNumber = "Bant numarası gereklidir";
     }
 
-    if (!formData.errorCode.trim()) {
+    if (!formData.errorCode) {
       newErrors.errorCode = "Hata kodu gereklidir";
     }
 
@@ -189,7 +206,7 @@ export default function ReportFormModal({
   }, [formData, onSubmitOnline]);
 
   // --- Input change - DÜZELTME: useCallback kaldırıldı, basit fonksiyon
-  const updateField = (field: keyof typeof formData, value: string) => {
+  const updateField = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Error'ı hemen temizle
     if (errors[field]) {
@@ -514,14 +531,14 @@ export default function ReportFormModal({
                 }}
                 placeholder="Hata kodu ara veya seç"
                 placeholderTextColor={colors.textMuted}
-                value={errorQuery || formData.errorCode}
+                value={errorQuery || formData.errorCode?.code || ""}
                 onChangeText={(text) => {
                   // Her karakter değişikliğinde (ekleme/silme) filtreleme güncellenir
                   setErrorQuery(text);
                   updateFilteredErrors(text); // Filtrelemeyi hemen güncelle
                   setIsErrorListOpen(true);
                   // Eğer input boşsa, seçili hata kodunu da temizle
-                  if (!text) updateField("errorCode", "");
+                  if (!text) updateField("errorCode", null);
                 }}
                 onFocus={() => setIsErrorListOpen(true)}
                 autoCorrect={false}
@@ -589,8 +606,8 @@ export default function ReportFormModal({
                           <TouchableOpacity
                             key={e.id}
                             onPress={() => {
-                              // Hata kodu seçildiğinde form verisini güncelle
-                              updateField("errorCode", e.code);
+                              // Hata kodu seçildiğinde form verisini güncelle (tüm obje olarak)
+                              updateField("errorCode", e);
                               // Input'a seçilen hata kodunu ve açıklamasını yaz
                               setErrorQuery(`${e.code} — ${e.description}`);
                               // Dropdown'ı kapat

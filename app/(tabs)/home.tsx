@@ -1,9 +1,9 @@
 // app/(tabs)/home.tsx - Modal kısmı düzeltildi
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, Modal, StatusBar, Dimensions, RefreshControl, Platform } from "react-native";
+import { View, Text, Modal, StatusBar, Dimensions, RefreshControl, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { mockReports, currentUser, addReport, Report } from "~/services/mock";
-import { fetchForms, mapFormToReport, createForm, uploadPhotos } from "~/services/forms";
+import { Report } from "~/services/mock";
+import { fetchForms, mapFormToReport, createFormWithPhotos, fetchErrorCodes, fetchLines } from "~/services/forms";
 import { useTheme } from "~/hooks/useTheme";
 import HeaderBadge from "~/components/HeaderBadge";
 import FloatingButton from "~/components/FloatingButton";
@@ -12,7 +12,7 @@ import ReportFormModal from "~/components/report/ReportFormModal";
 import PhotoPreviewModal from "~/components/report/PhotoPreviewModal";
 import { flushQueueIfOnline, subscribeQueueFlush } from "~/services/offlineQueue";
 import { BarChart3, Clock, CheckCircle2, TrendingUp } from "lucide-react-native";
-import { getUserName, getUserRole } from "~/services/storage";
+import { getUserName, getUserRole, getUserLine } from "~/services/storage";
 import React from "react";
 
 export default function EmployeeHomeScreen() {
@@ -26,14 +26,17 @@ export default function EmployeeHomeScreen() {
   const [previewIndex, setPreviewIndex] = useState<number>(0);
   const [username, setUsername] = React.useState("");
   const [userRole, setUserRole] = React.useState("");
+  const [userLine, setUserLine] = React.useState("");
 
-  // Load username and role from storage
+  // Load username, role and line from storage
   React.useEffect(() => {
     (async () => {
       const storedName = await getUserName();
       const storedRole = await getUserRole();
+      const storedLine = await getUserLine();
       if (storedName) setUsername(storedName);
       if (storedRole) setUserRole(storedRole);
+      if (storedLine) setUserLine(storedLine);
     })();
   }, []);
 
@@ -45,8 +48,9 @@ export default function EmployeeHomeScreen() {
         const mapped = forms.map(mapFormToReport);
         setReports(mapped);
       } catch (e) {
-        // fallback to mock if api fails
-        setReports(mockReports);
+        console.error('Raporlar yüklenemedi:', e);
+        // API başarısız olursa boş liste
+        setReports([]);
       }
     })();
   }, []);
@@ -91,48 +95,46 @@ export default function EmployeeHomeScreen() {
   }) {
     (async () => {
       try {
-        // 1) Create Form
-        const created = await createForm({
-          code: values.barcode,
-          type: values.productType,
-          name: values.productType,
-          productError: values.note || null,
-          errorCodeId: values.errorCode?.id ?? null,
-          // If you have lineId, map from lineNumber; else backend should infer
-          formDate: new Date().toISOString(),
-        });
-
-        // 2) Upload photos if required by backend
-        if (values.photos && values.photos.length > 0) {
-          // Convert file path images to base64 if needed. If you already have base64 strings, pass directly.
-          // Here we assume photos[] already hold base64 strings. If they are file URIs, we need to convert.
-          await uploadPhotos({
-            serialNumber: values.barcode,
-            base64Images: values.photos,
-            lengthUnit: undefined,
-          });
+        // Hata kodu objesini kontrol et
+        if (!values.errorCode || !values.errorCode.id) {
+          console.error('Geçerli bir hata kodu seçilmedi');
+          return;
         }
 
-        // 3) Update list – refetch or prepend
+        // Line ID'yi API'den bul
+        let lineId = 1; // Varsayılan değer
+        try {
+          const lines = await fetchLines();
+          const userLine = lines.find(line => line.name === values.lineNumber);
+          if (userLine) {
+            lineId = userLine.id;
+          }
+        } catch (error) {
+          console.warn('Line bilgileri alınamadı, varsayılan ID kullanılıyor:', error);
+        }
+
+        // API'ye gönderilecek temizlenmiş veri
+        const submissionData = {
+          code: values.barcode,
+          type: values.productType,
+          name: values.productType, // veya form'dan gelen name
+          productError: values.note,
+          quantity: 1, // Varsayılan değer, form'dan alınabilir
+          lineId: lineId,
+          errorCodeId: values.errorCode.id, // ÖNEMLİ: Hata kodunun ID'si
+        };
+
+        // Online gönderim
+        const created = await createFormWithPhotos(submissionData, values.photos);
         const mapped = mapFormToReport(created);
         setReports((prev) => [mapped, ...prev]);
         setFormVisible(false);
-      } catch (e) {
-        // fallback local add
-        const newReport: Report = {
-          id: Date.now(),
-          barcode: values.barcode,
-          productType: values.productType,
-          lineNumber: values.lineNumber,
-          errorCode: values.errorCode,
-          note: values.note || "",
-          photos: values.photos,
-          createdAt: new Date().toISOString(),
-          userId: currentUser.id,
-        };
-        addReport(newReport);
-        setReports((prev) => [newReport, ...prev]);
-        setFormVisible(false);
+        
+        Alert.alert("Başarılı", "Rapor başarıyla gönderildi");
+      } catch (e: any) {
+        const err = e as any;
+        console.error('Form gönderimi hatası:', err?.response?.data || err?.message || err);
+        Alert.alert("Hata", err?.response?.data?.message || err?.message || "Form gönderilemedi");
       }
     })();
   };
@@ -194,7 +196,7 @@ export default function EmployeeHomeScreen() {
       />
       
       <View className="flex-1 px-4 pt-2">
-        <HeaderBadge username={username} line={currentUser.line} />
+        <HeaderBadge username={username} line={userLine} />
 
         {/* İstatistik kartları */}
         <View className="flex-row mb-4">
@@ -269,7 +271,7 @@ export default function EmployeeHomeScreen() {
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
               <View style={{ flex: 1, justifyContent: 'flex-end' }}>
                 <ReportFormModal
-                  initialLineNumber={currentUser.line}
+                  initialLineNumber={userLine}
                   onCancel={() => setFormVisible(false)}
                   onSubmitOnline={handleSubmitOnline}
                 />

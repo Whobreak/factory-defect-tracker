@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACCESS_TOKEN_KEY = '@access_token';
 const USER_ROLE_KEY = '@user_role';
 const USER_NAME_KEY = '@user_name';
+const USER_LINE_KEY = '@user_line';
 
 export async function saveAccessToken(token: string) {
   await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
@@ -38,4 +39,16 @@ export async function getUserName() {
 
 export async function clearUserName() {
   await AsyncStorage.removeItem(USER_NAME_KEY);
+}
+
+export async function saveUserLine(line: string) {
+  await AsyncStorage.setItem(USER_LINE_KEY, line);
+}
+
+export async function getUserLine() {
+  return AsyncStorage.getItem(USER_LINE_KEY);
+}
+
+export async function clearUserLine() {
+  await AsyncStorage.removeItem(USER_LINE_KEY);
 }
