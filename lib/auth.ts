@@ -13,7 +13,7 @@ type LoginResponse = {
 };
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const data = await api.post('Users/login', payload);
+  const { data } = await api.post<LoginResponse>('Users/login', payload);
 
   if (data?.token) {
     await saveAccessToken(data.token);

@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
-import { ListCollapse, User, Users } from 'lucide-react-native';
+import { ListCollapse, User } from 'lucide-react-native';
 import { useTheme } from "~/hooks/useTheme";
 import { Platform } from "react-native";
 
@@ -68,20 +68,7 @@ export default function TabLayout() {
           ),  
         }}
       />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: 'Admin Panel',
-          tabBarLabel: 'Admin',
-          tabBarIcon: ({ color, focused }) => (
-            <Users 
-              color={color} 
-              size={focused ? 26 : 24}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
-        }}
-      />
+      
       <Tabs.Screen
         name="profile"
         options={{

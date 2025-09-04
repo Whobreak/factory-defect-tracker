@@ -47,7 +47,7 @@ const ProfilePage = () => {
   }, []);
 
   // Admin kontrolü
-  const isAdmin = userRole === 'SuperAdmin';
+  const isAdmin = userRole === 'Admin';
 
   const openModal = (user?: User) => {
     if (user) {
