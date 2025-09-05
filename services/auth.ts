@@ -1,79 +1,34 @@
-import { api, setAuthToken } from '../services/api';
-import { saveAccessToken, clearAccessToken, getAccessToken, saveUserRole, clearUserRole, saveUserName, saveUserLine } from '~/services/storage';
+import * as SecureStore from "expo-secure-store";
+import { api, setAuthToken } from "./api";
+import { LoginResponse } from "./types";
 
-type LoginPayload = {
-  username: string;
-  password: string;
+const TOKEN_KEY = "userToken";
+
+export const saveToken = async (token: string) => {
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
 };
 
-type LoginResponse = {
-  token: string;
-  role?: string;
-  user?: any;
+export const getToken = async (): Promise<string | null> => {
+  return await SecureStore.getItemAsync(TOKEN_KEY);
 };
 
-type UserInfo = {
-  username: string;
-  line: string;
-  role: string;
+export const logout = async () => {
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  setAuthToken(null);
 };
 
-export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/Users/login', payload);
-
+export const login = async (credentials: { username: string; password: string }): Promise<LoginResponse> => {
+  const { data } = await api.post<LoginResponse>("/Users/login", credentials);
   if (data?.token) {
-    await saveAccessToken(data.token);
+    await saveToken(data.token);
     setAuthToken(data.token);
   }
-  if (data?.role) {
-    await saveUserRole(data.role);
-  }
   return data;
-}
+};
 
-export async function logout() {
-  await clearAccessToken();
-  await clearUserRole();
-  setAuthToken(undefined);
-}
-
-export async function initAuthFromStorage() {
-  const token = await getAccessToken();
-  setAuthToken(token ?? undefined);
-  return token;
-}
-
-// User bilgilerini API'den çek
-export async function fetchUserInfo(): Promise<UserInfo> {
-  try {
-    const { data } = await api.get<UserInfo>('/Users/me');
-    return data;
-  } catch (error: any) {
-    console.error('User info fetch failed:', error);
-    throw new Error(error.message || 'Kullanıcı bilgileri alınamadı');
-  }
-}
-
-// Login sonrası kullanıcı bilgilerini güncelle
-export async function updateUserInfoAfterLogin(username: string): Promise<void> {
-  try {
-    // Önce username'i kaydet
-    await saveUserName(username);
-    
-    // API'den user bilgilerini çek
-    const userInfo = await fetchUserInfo();
-    await saveUserLine(userInfo.line);
-    
-    // Role bilgisini güncelle (eğer API'den geliyorsa)
-    if (userInfo.role) {
-      await saveUserRole(userInfo.role);
-    }
-  } catch (error: any) {
-    console.warn('User bilgileri güncellenemedi:', error);
-    // Fallback: sadece username'i kaydet
-    await saveUserName(username);
-    await saveUserLine('');
-  }
-}
+export const initAuthFromStorage = async () => {
+  const token = await getToken();
+  setAuthToken(token);
+};
 
 

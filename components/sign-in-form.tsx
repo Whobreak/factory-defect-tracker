@@ -28,9 +28,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Text } from "~/components/ui/text";
-import { login, fetchUserInfo } from "~/services/auth";
+import { login } from "~/services/auth";
 import { saveUserName, getUserRole, saveUserLine } from "~/services/storage";
-import { updateUserInfoAfterLogin } from "~/services/auth";
 
 export function SignInForm() {
   const { colors, isDark } = useTheme();
@@ -54,8 +53,9 @@ export function SignInForm() {
     try {
       const response = await login({ username, password });
       
-      // Kullanıcı bilgilerini güncelle
-      await updateUserInfoAfterLogin(username);
+      // Kullanıcı bilgilerini kaydet
+      await saveUserName(username);
+      await saveUserLine("1"); // Varsayılan hat
       
       // Role-based routing
       const role = await getUserRole();

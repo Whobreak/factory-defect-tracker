@@ -1,204 +1,145 @@
-import { api } from '../services/api';
-import { Report } from '../services/mock';
-import * as FileSystem from 'expo-file-system';
+import { api, uploadApi } from "~/services/api";
+import { Form, FormUpdate, RNFile } from "~/services/types";
 
-export type LineDto = {
-  id: number;
-  name: string | null;
-};
+// Form gönderme
+export const submitForm = async (formData: any, photos: any[]) => {
+  const formDataPayload = new FormData();
+  Object.keys(formData).forEach((key) => {
+    formDataPayload.append(key, formData[key]);
+  });
 
-export type ErrorCodeDto = {
-  id: number;
-  code: string | null;
-  description: string | null;
-};
+  photos.forEach((photo, index) => {
+    const filename = photo.uri.split("/").pop() || `photo_${index}.jpg`;
+    const type = photo.type || "image/jpeg";
+    formDataPayload.append("photos", {
+      uri: photo.uri,
+      name: filename,
+      type,
+    } as any);
+  });
 
-export type PhotoDto = {
-  id: number;
-  fileName?: string | null;
-  filePath?: string | null;
-  formId: number;
-};
-
-export type FormDataDto = {
-  id: number;
-  code?: string | null;
-  type?: string | null;
-  name?: string | null;
-  productError?: string | null;
-  quantity?: number | null;
-  status?: string | null;
-  errorCodeId?: number | null;
-  errorCode?: ErrorCodeDto | null;
-  lineId?: number | null;
-  line?: LineDto | null;
-  photos?: PhotoDto[] | null;
-  formDate?: string | null;
-};
-
-export async function fetchForms(): Promise<FormDataDto[]> {
-  const { data } = await api.get<FormDataDto[]>('/Forms');
+  const { data } = await uploadApi.post("/Forms", formDataPayload, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data;
-}
-
-/**
- * API'den tüm line'ları çeker
- */
-export async function fetchLines(): Promise<LineDto[]> {
-  const { data } = await api.get<LineDto[]>('/Lines');
-  return data;
-}
-
-/**
- * API'den tüm hata kodlarını çeker
- */
-export async function fetchErrorCodes(): Promise<ErrorCodeDto[]> {
-  const { data } = await api.get<ErrorCodeDto[]>('/ErrorCodes');
-  return data;
-}
-
-export function mapFormToReport(form: FormDataDto): Report {
-  return {
-    id: form.id,
-    barcode: form.code || '',
-    productType: form.type || form.name || '',
-    lineNumber: form.line?.name || '',
-    errorCode: form.errorCode
-      ? {
-          id: form.errorCode.id,
-          code: form.errorCode.code || '',
-          description: form.errorCode.description || '',
-        }
-      : { id: 0, code: '', description: '' },
-    note: form.productError || '',
-    photos: (form.photos || []).map((p) => p.filePath || '').filter(Boolean),
-    createdAt: form.formDate || new Date().toISOString(),
-    userId: undefined,
-  };
-}
-
-export type CreateFormPayload = {
-  code?: string | null;
-  type?: string | null;
-  name?: string | null;
-  productError?: string | null;
-  quantity?: number | null;
-  status?: string | null;
-  errorCodeId?: number | null;
-  lineId?: number | null;
-  formDate?: string | null;
-  photoUrls?: string[] | null;
 };
 
-export type PhotoUploadRequest = {
-  serialNumber?: string | null;
-  base64Images?: string[] | null;
-  lengthUnit?: string | null;
-};
-
-export type PhotoUploadResponse = {
-  success: boolean;
-  message?: string;
-  filePaths?: string[];
-  uploadId?: string;
-};
-
-/**
- * URI'yi base64'e çevir
- */
-async function convertUriToBase64(uri: string): Promise<string> {
-  if (uri.startsWith('data:')) {
-    return uri; // Zaten base64 formatında
-  }
-  
+// Form verisini ve fotoğrafları API'ye gönderir
+export const createFormWithPhotos = async (formData: any, photoUris: string[]) => {
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    return `data:image/jpeg;base64,${base64}`;
-  } catch (error) {
-    console.error('Photo conversion failed:', error);
-    throw new Error('Fotoğraf dönüştürülemedi');
-  }
-}
-
-/**
- * Adım 1: Fotoğrafları Base64 formatında API'ye yükler.
- */
-export async function uploadPhotos(
-  serialNumber: string,
-  photoUris: string[]
-): Promise<PhotoUploadResponse> {
-  // Fotoğrafları base64'e çevir
-  const base64Images = await Promise.all(
-    photoUris.map(uri => convertUriToBase64(uri))
-  );
-
-  const payload: PhotoUploadRequest = {
-    serialNumber: serialNumber,
-    base64Images: base64Images,
-    lengthUnit: '100',
-  };
-  
-  console.log(`[+] ${base64Images.length} adet fotoğraf yükleniyor...`);
-  const { data } = await api.post<PhotoUploadResponse>('/PhotoUpload', payload);
-  console.log('[+] Fotoğraf yükleme başarılı:', data);
-  return data;
-}
-
-/**
- * Adım 2: Form verisini API'ye gönderir.
- */
-export async function createForm(payload: CreateFormPayload): Promise<FormDataDto> {
-  console.log('[+] Form verisi gönderiliyor:', payload);
-  const { data } = await api.post<FormDataDto>('/Forms', payload);
-  console.log('[+] Form başarıyla oluşturuldu:', data);
-  return data;
-}
-
-/**
- * Adım 3: Fotoğrafları yükler ve ardından form verisini gönderir.
- */
-export async function createFormWithPhotos(
-  formData: {
-    code: string;
-    type: string;
-    name: string;
-    productError?: string;
-    quantity: number;
-    lineId: number;
-    errorCodeId: number;
-  },
-  photoUris: string[]
-): Promise<FormDataDto> {
-  try {
-    // 1. Fotoğrafları Yükle (eğer varsa)
-    let photoUrls: string[] | undefined;
-    if (photoUris && photoUris.length > 0) {
-      const uploadResult = await uploadPhotos(formData.code, photoUris);
-      photoUrls = uploadResult.filePaths;
-    }
-
-    // 2. Form Verisini Hazırla ve Gönder
-    const formPayload: CreateFormPayload = {
+    console.log('[+] Form ve fotoğraf gönderim süreci başlıyor...');
+    console.log('[+] Fotoğraf sayısı:', photoUris.length);
+    
+    // Form verisini hazırla
+    const submissionData = {
       code: formData.code,
       type: formData.type,
       name: formData.name,
-      productError: formData.productError,
+      productError: formData.productError || '',
       quantity: formData.quantity,
       lineId: formData.lineId,
       errorCodeId: formData.errorCodeId,
-      status: 'işlem yapılmadı',
-      formDate: new Date().toISOString(),
-      photoUrls: photoUrls,
     };
 
-    const createdForm = await createForm(formPayload);
-    return createdForm;
+    // Fotoğrafları RN file formatına çevir
+    const photos = photoUris.map((uri, index) => ({
+      uri,
+      name: uri.split('/').pop() || `photo_${index}.jpg`,
+      type: 'image/jpeg',
+    }));
+
+    console.log('[+] Gönderilecek form verisi:', submissionData);
+    console.log('[+] Fotoğraf sayısı:', photos.length);
+    
+    const result = await submitForm(submissionData, photos);
+    console.log('[+] Form başarıyla oluşturuldu:', result);
+    
+    return result;
   } catch (error) {
     console.error('Form gönderme işlemi sırasında bir hata oluştu:', error);
     throw new Error('Form ve fotoğraflar sunucuya gönderilemedi.');
   }
-}
+};
 
+// Formları listeleme
+export const fetchForms = async (): Promise<Form[]> => {
+  try {
+    console.log('[+] Formlar yükleniyor...');
+    const { data } = await api.get<Form[]>("/Forms");
+    console.log('[+] Formlar başarıyla yüklendi:', data);
+    return data || [];
+  } catch (error) {
+    console.error('Formlar yüklenirken hata oluştu:', error);
+    // Fallback olarak boş array döndür
+    return [];
+  }
+};
 
+// Formu güncelleme
+export const updateForm = async (id: string, updates: FormUpdate) => {
+  const { data } = await api.put(`/Forms/${id}`, updates);
+  return data;
+};
+
+// Formu silme
+export const deleteForm = async (id: string) => {
+  const { data } = await api.delete(`/Forms/${id}`);
+  return data;
+};
+
+// Form durumunu güncelleme
+export const updateFormStatus = async (id: string, status: string) => {
+  const { data } = await api.put(
+    `/Forms/${id}/status`,
+    { status },
+    { headers: { "Content-Type": "application/json" } }
+  );
+  return data;
+};
+
+// Hata kodlarını getir
+export type ErrorCode = { id: number; code: string; description?: string };
+
+export const fetchErrorCodes = async (): Promise<ErrorCode[]> => {
+  try {
+    console.log('[+] Hata kodları yükleniyor...');
+    const { data } = await api.get<ErrorCode[]>("/ErrorCodes");
+    console.log('[+] Hata kodları başarıyla yüklendi:', data);
+    return data || [];
+  } catch (error) {
+    console.error('Hata kodları yüklenirken hata oluştu:', error);
+    // Fallback olarak boş array döndür
+    return [];
+  }
+};
+
+// Hatları getir
+export type Line = { id: number; name: string };
+
+export const fetchLines = async (): Promise<Line[]> => {
+  try {
+    console.log('[+] Hatlar yükleniyor...');
+    const { data } = await api.get<Line[]>("/Lines");
+    console.log('[+] Hatlar başarıyla yüklendi:', data);
+    return data || [];
+  } catch (error) {
+    console.error('Hatlar yüklenirken hata oluştu:', error);
+    // Fallback olarak boş array döndür
+    return [];
+  }
+};
+
+// Form'u Report formatına çevir
+export const mapFormToReport = (form: any) => {
+  return {
+    id: form.id || Date.now().toString(),
+    barcode: form.code || form.barcode || '',
+    productType: form.type || form.productType || '',
+    lineNumber: form.lineNumber || '1',
+    errorCode: form.errorCode || { id: 1, code: 'E001', description: 'Bilinmeyen Hata' },
+    note: form.productError || form.note || '',
+    photos: form.photos || [],
+    createdAt: form.createdAt || new Date().toISOString(),
+    status: form.status || 'active'
+  };
+};

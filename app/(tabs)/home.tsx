@@ -1,4 +1,4 @@
-// app/(tabs)/home.tsx - Modal kısmı düzeltildi
+// app/(tabs)/home.tsx - Saat 11:15 versiyonu
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, Modal, StatusBar, Dimensions, RefreshControl, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -81,11 +81,18 @@ export default function EmployeeHomeScreen() {
     setRefreshing(true);
     await flushQueueIfOnline();
     // Gerçek uygulamada API'den veri çek
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      const forms = await fetchForms();
+      const mapped = forms.map(mapFormToReport);
+      setReports(mapped);
+    } catch (error) {
+      console.error('Refresh sırasında hata:', error);
+    }
+    setRefreshing(false);
   };
 
   // ONLINE gönderim yolu
-  function handleSubmitOnline(values: {
+  async function handleSubmitOnline(values: {
     barcode: string;
     productType: string;
     lineNumber: string;
@@ -93,11 +100,11 @@ export default function EmployeeHomeScreen() {
     note?: string;
     photos: string[];
   }) {
-    (async () => {
       try {
         // Hata kodu objesini kontrol et
         if (!values.errorCode || !values.errorCode.id) {
           console.error('Geçerli bir hata kodu seçilmedi');
+          Alert.alert("Hata", "Lütfen geçerli bir hata kodu seçin");
           return;
         }
 
@@ -134,9 +141,8 @@ export default function EmployeeHomeScreen() {
       } catch (e: any) {
         const err = e as any;
         console.error('Form gönderimi hatası:', err?.response?.data || err?.message || err);
-        Alert.alert("Hata", err?.response?.data?.message || err?.message || "Form gönderilemedi");
+        Alert.alert("Hata", err?.response?.data?.message || err?.message || "Form gönderilemedi");    
       }
-    })();
   };
 
   const StatCard = ({ 
@@ -258,26 +264,26 @@ export default function EmployeeHomeScreen() {
           }
         />
 
-        {/* DÜZELTME: Daha temiz Modal implementasyonu */}
-          <Modal 
-            visible={formVisible} 
-            transparent
-            animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
-            presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
-            statusBarTranslucent={Platform.OS === 'ios'}
-            onRequestClose={() => setFormVisible(false)}
-            hardwareAccelerated
-          > 
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                <ReportFormModal
-                  initialLineNumber={userLine}
-                  onCancel={() => setFormVisible(false)}
-                  onSubmitOnline={handleSubmitOnline}
-                />
-              </View>
+        <Modal 
+          visible={formVisible} 
+          transparent
+          animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+          presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : undefined}
+          statusBarTranslucent={Platform.OS === 'ios'}
+          onRequestClose={() => setFormVisible(false)}
+          hardwareAccelerated
+        > 
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+              <ReportFormModal
+                initialLineNumber={userLine}
+                onCancel={() => setFormVisible(false)}
+                onSubmitOnline={handleSubmitOnline}
+                visible={formVisible}
+              />
             </View>
-          </Modal>
+          </View>
+        </Modal>
 
         <FloatingButton onPress={() => setFormVisible(true)} />
         <PhotoPreviewModal 
