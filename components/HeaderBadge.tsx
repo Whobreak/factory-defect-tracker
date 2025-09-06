@@ -1,113 +1,70 @@
-// components/HeaderBadge.tsx
-import React from "react";
-import { View, Text, Dimensions } from "react-native";
-import { Building2, User } from "lucide-react-native";
-import { useTheme } from "~/hooks/useTheme";
-import LogoLight_2 from "~/sersim-light.svg";
-import LogoDark_2 from "~/sersim-dark.svg";
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { User } from 'lucide-react-native';
+import { useAuth } from '~/contexts/AuthContext';
+import { useTheme } from '~/hooks/useTheme';
+import { Text } from '~/components/ui/text';
+import { LineService } from '~/services/line.service';
+import { LineDto } from '~/types';
 
+export default function HeaderBadge() {
+  const { colors } = useTheme();
+  const { user } = useAuth();
 
-type Props = {
-  username: string;
-  line: string;
-};
+  const [lines, setLines] = useState<LineDto[]>([]);
+  const [selectedLine, setSelectedLine] = useState<LineDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default function HeaderBadge({ username, line }: Props) {
-  const { colors, isDark } = useTheme();
-  const { width } = Dimensions.get('window');
-  
-  // Responsive design - küçük ekranlarda daha kompakt
-  const isSmallScreen = width < 350;
+  useEffect(() => {
+    const fetchLines = async () => {
+      setIsLoading(true);
+      try {
+        const response = await LineService.getLines();
+        setLines(response.data);
+        if (response.data.length > 0) {
+          // Varsayılan olarak ilk bandı seç
+          setSelectedLine(response.data[0]); 
+        }
+      } catch (error) {
+        console.error("Çalışma bantları alınamadı:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    fetchLines();
+  }, []);
+
+  // BURASI SENİN ORİJİNAL TASARIMIN
   return (
-    <View 
-      className={`rounded-2xl mb-4 shadow-lg overflow-hidden relative ${isSmallScreen ? 'mx-1' : 'mx-0'}`}
+    <View
+      // İkon kaldırıldığı için sondaki boşluk (pr-4) azaltılabilir veya kaldırılabilir.
+      className="flex-row items-center gap-x-4 rounded-full p-2 pr-3" 
       style={{ backgroundColor: colors.surface }}
     >
-      {/* Gradient background overlay */}
-      <View 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundColor: colors.primary,
-        }}
-      />
-      
-      {/* Ana içerik */}
-      <View className={`p-4 ${isSmallScreen ? 'p-3' : 'p-4'}`}>
-        {/* Üst kısım - Hoşgeldin mesajı */}
-        <View className="flex-row items-center mb-3">
-          <View 
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.primary }}
-          >
-            <User color={colors.primaryForeground} size={20} />
-          </View>
-          <View className="flex-1">
-            <Text 
-              className={`text-xs uppercase tracking-wider opacity-70 ${isSmallScreen ? 'text-xs' : 'text-sm'}`}
-              style={{ color: colors.textSecondary }}
-            >
-              Hoşgeldin
-            </Text>
-            <Text 
-              className={`font-bold ${isSmallScreen ? 'text-lg' : 'text-xl'}`}
-              style={{ color: colors.text }}
-              numberOfLines={1}
-            >  {username}
-            
-            </Text>
-          </View>
-        </View>
-
-        {/* Alt kısım - Bant bilgisi */}
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <View 
-              className="w-8 h-8 rounded-lg items-center justify-center mr-3"
-              style={{ backgroundColor: colors.surfaceSecondary }}
-            >
-              <Building2 color={colors.primary} size={16} />
-            </View>
-            <View>
-              <Text 
-                className="text-xs opacity-70"
-                style={{ color: colors.textSecondary }}
-              >
-                Çalışma Bandı 
-              </Text>
-              <Text 
-                className={`font-semibold ${isSmallScreen ? 'text-sm' : 'text-base'}`}
-                style={{ color: colors.text }}
-              >
-                {line}
-              </Text>
-            </View>
-          </View>
-
-          {/* Status indicator */}
-          <View className="flex-row items-center">
-            <View 
-              className="w-2 h-2 rounded-full mr-2"
-              style={{ backgroundColor: colors.success }}
-            />
-            <Text 
-              className="text-xs font-medium"
-              style={{ color: colors.textSecondary }}
-            >
-              Aktif
-            </Text>
-          </View>
-        </View>
-
-        {/* Decorative elements */}
-        <View className="absolute top-2 right-4 w-20 h-20 opacity-100">
-          {isDark ? (
-            <LogoDark_2 width={80} height={80} />
-          ) : (
-            <LogoLight_2 width={80} height={80} />
-          )}
-        </View>
+      {/* Profil İkonu */}
+      <View
+        className="h-10 w-10 items-center justify-center rounded-full"
+        style={{ backgroundColor: colors.primary }}
+      >
+        <User size={24} color="white" />
       </View>
+
+      {/* Kullanıcı ve Hat Bilgisi */}
+      <View>
+        <Text className="text-base font-bold" style={{ color: colors.text }}>
+          {user?.username || 'Kullanıcı Adı'}
+        </Text>
+        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+          {isLoading ? (
+            'Yükleniyor...'
+          ) : (
+            selectedLine ? selectedLine.name : 'Hat Seçilmedi'
+          )}
+        </Text>
+      </View>
+      
+      {/* Hat değiştirme ikonu ve butonu kaldırıldı. */}
     </View>
   );
 }

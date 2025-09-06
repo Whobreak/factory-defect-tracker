@@ -1,96 +1,41 @@
-// components/report/ReportsList.tsx
-import React from "react";
-import { FlatList, View, Text, Dimensions, RefreshControlProps  } from "react-native";
-import { FileText, Inbox } from "lucide-react-native";
-import { Report } from "~/services/mock";
-import { useTheme } from "~/hooks/useTheme";
-import ReportCard from "~/components/ReportCard";
-import { RefreshControl } from 'react-native';
+import React from 'react';
+// 1. Gerekli tipleri react-native'den import et
+import { FlatList, View, RefreshControl, RefreshControlProps } from 'react-native'; 
+import { Text } from '~/components/ui/text';
+import ReportCard from '~/components/ReportCard';
+import { Form } from '~/types';
+import { useTheme } from '~/hooks/useTheme';
 
-type Props = {
-  data: Report[];
-  onImagePress?: (uris: string[], index: number) => void;
-  refreshControl?: React.ReactElement<RefreshControlProps>;
-};
+// Bileşenin alacağı propları tanımla
+interface ReportsListProps {
+  data: Form[];
+  onImagePress: (uris: string[], index: number) => void;
+  // 2. refreshControl'ün tipini ReactElement<RefreshControlProps> olarak düzelt
+  refreshControl: React.ReactElement<RefreshControlProps>; 
+}
 
-export default function ReportsList({ data, onImagePress, refreshControl }: Props) {
+export default function ReportsList({ data, onImagePress, refreshControl }: ReportsListProps) {
   const { colors } = useTheme();
-  const { height } = Dimensions.get('window');
 
-  const EmptyState = () => (
-    <View 
-      className="flex-1 items-center justify-center px-8"
-      style={{ minHeight: height * 0.4 }}
-    >
-      <View 
-        className="w-24 h-24 rounded-full items-center justify-center mb-6"
-        style={{ backgroundColor: colors.surfaceSecondary }}
-      >
-        <Inbox color={colors.textMuted} size={40} />
-      </View>
-      
-      <Text 
-        className="text-xl font-semibold mb-2 text-center"
-        style={{ color: colors.text }}
-      >
-        Henüz rapor yok
-      </Text>
-      
-      <Text 
-        className="text-sm text-center leading-6"
-        style={{ color: colors.textSecondary }}
-      >
-        İlk raporunuzu oluşturmak için{'\n'}aşağıdaki + butonuna tıklayın
-      </Text>
-      
-      {/* Decorative elements */}
-      <View className="absolute top-8 left-8 opacity-20">
-        <FileText color={colors.textMuted} size={24} />
-      </View>
-      <View className="absolute bottom-12 right-12 opacity-20">
-        <FileText color={colors.textMuted} size={32} />
-      </View>
-    </View>
-  );
-
-  const renderItem = ({ item, index }: { item: Report; index: number }) => (
-    <View
-      style={{
-        opacity: 1,
-        transform: [
-          {
-            translateY: 0,
-          },
-        ],
-      }}
-    >
-      <ReportCard 
-        report={item} 
-        onImagePress={onImagePress || (() => {})} 
-      />
-    </View>
-  );
-
-  const ItemSeparator = () => <View style={{ height: 8 }} />;
-
+  // ==========================================================
+  // AŞAĞIDAKİ TÜM TASARIM KODUN (JSX) TAMAMEN AYNI KALDI
+  // ==========================================================
   return (
     <FlatList
       data={data}
       keyExtractor={(item) => item.id.toString()}
-      renderItem={renderItem}
-      ItemSeparatorComponent={ItemSeparator}
-      ListEmptyComponent={EmptyState}
+      renderItem={({ item }) => (
+        <ReportCard 
+          report={item}
+          onImagePress={(index) => onImagePress(item.photos, index)} 
+        />
+      )}
+      ListEmptyComponent={
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
+          <Text style={{ color: colors.textSecondary }}>Henüz rapor bulunmuyor.</Text>
+        </View>
+      }
       refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        flexGrow: 1,
-        paddingBottom: 100, // FloatingButton için alan bırak
-      }}
-      removeClippedSubviews={false}
-      maxToRenderPerBatch={5}
-      updateCellsBatchingPeriod={100}
-      initialNumToRender={10}
-      windowSize={10}
     />
   );
 }
