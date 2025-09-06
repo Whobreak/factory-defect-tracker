@@ -1,74 +1,47 @@
-import * as React from "react";
-import {
-  type TextInput,
-  StyleSheet,
-  View,
-  StatusBar,
-  Platform,
-  KeyboardAvoidingView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useTheme } from "~/hooks/useTheme";
-import { User, Lock } from "lucide-react-native";
-
-// İki farklı logo (dark/light)
-import LogoLight from "~/assets/images/sersim-light.svg";
-import LogoDark from "~/assets/images/sersim-dark.svg";
-
-import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Separator } from "~/components/ui/separator";
-import { Text } from "~/components/ui/text";
-import { login } from "~/services/auth";
-import { saveUserName, getUserRole, saveUserLine } from "~/services/storage";
+import * as React from 'react';
+import { type TextInput, StyleSheet, View, Platform, KeyboardAvoidingView, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '~/hooks/useTheme';
+import { User, Lock } from 'lucide-react-native';
+import { useAuth } from '~/contexts/AuthContext';
+import LogoLight from '~/assets/images/sersim-light.svg';
+import LogoDark from '~/assets/images/sersim-dark.svg';
+import { Button } from '~/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '~/components/ui/card';
+import { Input } from '~/components/ui/input';
+import { Label } from '~/components/ui/label';
+import { Separator } from '~/components/ui/separator';
+import { Text } from '~/components/ui/text';
 
 export function SignInForm() {
   const { colors, isDark } = useTheme();
   const passwordInputRef = React.useRef<TextInput>(null);
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+
+  // Buradaki isLoading AuthContext'ten geliyor global 
+  const { signIn, isLoading } = useAuth();
 
   function onUsernameSubmitEditing() {
     passwordInputRef.current?.focus();
   }
 
+  // onSubmit fonksiyonunu AuthContext'i kullanacak şekilde güncelledim
   async function onSubmit() {
     if (!username || !password) {
-      setError("Kullanıcı adı ve şifre gereklidir");
+      setError('Kullanıcı adı ve şifre gereklidir');
       return;
     }
     setError(null);
-    setLoading(true);
     try {
-      const response = await login({ username, password });
-      
-      // Kullanıcı bilgilerini kaydet
-      await saveUserName(username);
-      await saveUserLine("1"); // Varsayılan hat
-      
-      // Role-based routing
-      const role = await getUserRole();
-      if (role === 'SuperAdmin') {
-        router.replace("/(tabs)/profile");
-      } else {
-        router.replace("/(tabs)/home");
-      }
+      // Artık signIn fonksiyonunu çağırıyoruz. Yönlendirme ve state yönetimi
+      // AuthContext içinde otomatik olarak yapılacak.
+      await signIn({ username, password });
     } catch (e: any) {
-      const message = e?.response?.data?.message || e?.message || "Giriş başarısız";
+      const message = e?.response?.data?.message || e?.message || 'Giriş başarısız';
       setError(message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -95,20 +68,21 @@ export function SignInForm() {
   );
 
   return (
+    
     <SafeAreaView
       className="flex-1"
       style={{ backgroundColor: colors.background }}
     >
       <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
+        barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
         translucent={false}
       />
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
         <View className="flex-1 px-6 justify-center">
           <View className="mb-6">
@@ -209,7 +183,7 @@ export function SignInForm() {
                   </Text>
                 ) : null}
 
-                {/* Button */}
+                {/*  Button prop'larını güncelle */}
                 <Button
                   className="w-full rounded-2xl h-14"
                   style={{
@@ -221,10 +195,10 @@ export function SignInForm() {
                     elevation: 4,
                   }}
                   onPress={onSubmit}
-                  disabled={loading}
+                  disabled={isLoading} 
                 >
                   <Text className="text-lg font-bold" style={{ color: "white" }}>
-                    {loading ? "Giriş yapılıyor..." : "Devam Et"}
+                    {isLoading ? "Giriş yapılıyor..." : "Devam Et"}
                   </Text>
                 </Button>
               </View>
@@ -240,6 +214,7 @@ export function SignInForm() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   logo: {

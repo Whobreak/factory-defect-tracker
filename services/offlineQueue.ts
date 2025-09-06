@@ -1,100 +1,82 @@
-// lib/offlineQueue.ts
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import NetInfo from "@react-native-community/netinfo";
-import { Report } from "~/services/mock";
-import { getUserName, getUserRole } from "~/services/storage";
-import { createFormWithPhotos } from "~/services/forms";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FormService } from '~/services/formData.service';
+import { CreateFormPayload, RNFile } from '~/types';
 
-type EnqueuedReport = {
-  tempId: string;
-  payload: {
-    barcode: string;
-    productType: string;
-    lineNumber: string;
-    errorCode: any;
-    note?: string;
-    photos: string[];
-    userId: number;
-  };
-  createdAtISO: string;
+const QUEUE_STORAGE_KEY = 'offline_form_queue';
+
+// Kuyrukta saklanacak öğenin yapı tanım
+interface QueuedForm {
+  id: string; 
+  formPayload: CreateFormPayload; // Form verisini CreateFormPayload olarak sakla
+  photos: RNFile[]; // Fotoğrafları RNFile dizisi olarak sakla
+}
+
+/**
+  Gönderilemeyen formları fotoğraflarıyla birlikte çevrimdışı kuyruğa ekle
+ @param formPayload - CreateFormPayload tipinde form verisi
+ @param photos - RNFile fotoğraf dizisi
+ */
+export const addFormToQueue = async (formPayload: CreateFormPayload, photos: RNFile[]) => {
+  try {
+    const existingQueue = await getQueue();
+    const newQueuedForm: QueuedForm = {
+      id: `form_${new Date().getTime()}`, // ID oluştur
+      formPayload,
+      photos,
+    };
+    const updatedQueue = [...existingQueue, newQueuedForm];
+    await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueue));
+    console.log('Form çevrimdışı kuyruğa eklendi.');
+  } catch (error) {
+    console.error('Kuyruğa ekleme hatası:', error);
+  }
 };
 
-const KEY = "@offline_report_queue";
+/**
+ * Cihaz hafızasındaki tüm kuyruğu getirir.
+ */
+export const getQueue = async (): Promise<QueuedForm[]> => {
+  try {
+    const queueJson = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
+    return queueJson ? JSON.parse(queueJson) : [];
+  } catch (error) {
+    console.error('Kuyruk alınırken hata:', error);
+    return [];
+  }
+};
 
-export async function getQueue(): Promise<EnqueuedReport[]> {
-  const raw = await AsyncStorage.getItem(KEY);
-  return raw ? JSON.parse(raw) : [];
-}
-
-async function setQueue(q: EnqueuedReport[]) {
-  await AsyncStorage.setItem(KEY, JSON.stringify(q));
-}
-
-export async function enqueueReportIfOffline(payload: Omit<EnqueuedReport["payload"], "userId">): Promise<boolean> {
-  const state = await NetInfo.fetch();
-  const isOnline = !!state.isConnected && !!state.isInternetReachable;
-
-  if (isOnline) {
-    // online ise kuyruk yerine direkt gönderim için false dön
-    return false;
+/**
+ * İnternet geldiğinde kuyruktaki formları işlemeye başlar
+ */
+export const processOfflineQueue = async () => {
+  const queuedForms = await getQueue();
+  if (queuedForms.length === 0) {
+    return;
   }
 
-  // Kullanıcı ID'sini role'den belirle
-  const userRole = await getUserRole();
-  const userId = userRole === 'SuperAdmin' ? 1 : 2; // Admin: 1, User: 2
+  console.log(`${queuedForms.length} adet form kuyrukta işleniyor...`);
 
-  const q = await getQueue();
-  q.push({
-    tempId: `tmp_${Date.now()}`,
-    payload: {
-      ...payload,
-      userId: userId,
-    },
-    createdAtISO: new Date().toISOString(),
-  });
-  await setQueue(q);
-  return true;
-}
-
-export async function flushQueueIfOnline() {
-  const state = await NetInfo.fetch();
-  const isOnline = !!state.isConnected && !!state.isInternetReachable;
-  if (!isOnline) return;
-
-  const q = await getQueue();
-  if (!q.length) return;
-
-  const remaining: EnqueuedReport[] = [];
-  for (const item of q) {
+  // Kuyruktaki her bir öğeyi sırayla gönder
+  for (const item of queuedForms) {
     try {
-      // Gerçek API çağrısı yap
-      const submissionData = {
-        code: item.payload.barcode,
-        type: item.payload.productType,
-        name: item.payload.productType,
-        productError: item.payload.note,
-        quantity: 1,
-        lineId: 1, // Line ID'yi API'den al
-        errorCodeId: item.payload.errorCode.id,
-      };
+      await FormService.submitFormOnline(item.formPayload, item.photos);
+      console.log(`Kuyruktaki form başarıyla gönderildi: ${item.id}`);
 
-      await createFormWithPhotos(submissionData, item.payload.photos);
-      console.log('Offline queue item processed successfully:', item.tempId);
-    } catch (e) {
-      console.error('Failed to process offline item:', e);
-      // başarısız olanları kuyrukta tut
-      remaining.push(item);
+      const currentQueue = await getQueue();
+      const updatedQueue = currentQueue.filter((form) => form.id !== item.id);
+      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueue));
+
+    } catch (error) {
+      console.error(`Kuyruktaki form gönderilemedi: ${item.id}`, error);
     }
   }
-  await setQueue(remaining);
-}
+};
 
-// app başlarken ve bağlantı değiştiğinde flush et
-let subscribed = false;
-export function subscribeQueueFlush() {
-  if (subscribed) return;
-  NetInfo.addEventListener(() => {
-    flushQueueIfOnline();
-  });
-  subscribed = true;
-}
+export const clearQueue = async () => {
+  try {
+    await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
+    console.log('Çevrimdışı kuyruk temizlendi.');
+  } catch (error) {
+    console.error('Kuyruk temizleme hatası:', error);
+  }
+};

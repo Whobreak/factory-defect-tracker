@@ -1,462 +1,245 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   Modal,
-  Alert,
   ScrollView,
-  ActivityIndicator,
   TouchableOpacity,
   Image,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { enqueueReportIfOffline } from "~/services/offlineQueue";
-import { createFormWithPhotos } from "~/services/forms";
-import { useTheme } from "~/hooks/useTheme";
-import { X, Camera, Package, AlertTriangle, FileText, Check } from "lucide-react-native";
+  Alert,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Camera, X, PlusCircle } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { AutocompleteDropdown } from 'react-native-autocomplete-dropdown';
 
-type Props = {
-  initialLineNumber: string;
-  onCancel: () => void;
-  onSubmitOnline: (formData: ReportFormData) => Promise<void>;
-  visible?: boolean;
-};
+import { useTheme } from '~/hooks/useTheme';
+import { Text } from '~/components/ui/text';
+import { Label } from '~/components/ui/label';
+import { Input } from '~/components/ui/input';
+import { Button } from '~/components/ui/button';
+import PhotoPreviewModal from './PhotoPreviewModal';
 
-export type ReportFormData = {
-  barcode: string;
-  productType: string;
-  lineNumber: string;
-  errorCode: any;
-  note?: string;
-  photos: string[];
-};
+import { FormService } from '~/services/formData.service';
+import { ErrorCodeService } from '~/services/errorCode.service';
+import { useNetwork } from '~/components/NetworkProvider';
+import { ErrorCodeDto, CreateFormPayload, RNFile } from '~/types';
+
+interface ReportFormModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSubmitSuccess: () => void;
+}
 
 export default function ReportFormModal({
-  initialLineNumber,
-  onCancel,
-  onSubmitOnline,
-  visible = true,
-}: Props) {
+  visible,
+  onClose,
+  onSubmitSuccess,
+}: ReportFormModalProps) {
   const { colors } = useTheme();
-  const [formData, setFormData] = useState<ReportFormData>({
-    barcode: "",
-    productType: "",
-    lineNumber: initialLineNumber,
-    errorCode: null,
-    note: "",
-    photos: [],
+  const { isConnected } = useNetwork();
+
+  const [form, setForm] = useState<Omit<CreateFormPayload, 'ErrorCodeId' | 'Photos' | 'LineId'>>({
+    Code: '',
+    Type: 'Üretim',
+    Name: '',
+    ProductError: '',
+    Quantity: 1,
   });
+  const [selectedErrorCode, setSelectedErrorCode] = useState<ErrorCodeDto | null>(null);
+  const [photos, setPhotos] = useState<RNFile[]>([]);
+  
+  const [errorCodes, setErrorCodes] = useState<ErrorCodeDto[]>([]);
+  const [loadingErrorCodes, setLoadingErrorCodes] = useState(false);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewPhoto, setPreviewPhoto] = useState<RNFile | null>(null);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  useEffect(() => {
+    if (visible) {
+      const fetchErrorCodes = async () => {
+        setLoadingErrorCodes(true);
+        try {
+          const response = await ErrorCodeService.getErrorCodes();
+          setErrorCodes(response.data);
+        } catch (error) {
+          console.error('Hata kodları alınamadı:', error);
+          Alert.alert('Hata', 'Hata kodları listesi yüklenemedi.');
+        } finally {
+          setLoadingErrorCodes(false);
+        }
+      };
+      fetchErrorCodes();
+    }
+  }, [visible]);
 
-    if (!formData.barcode.trim()) {
-      newErrors.barcode = "Barkod gereklidir";
-    }
-    if (!formData.productType.trim()) {
-      newErrors.productType = "Ürün tipi gereklidir";
-    }
-    if (!formData.errorCode) {
-      newErrors.errorCode = "Hata kodu gereklidir";
-    }
-    if (formData.photos.length === 0) {
-      newErrors.photos = "En az bir fotoğraf gereklidir";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const errorCodeDataSet = useMemo(() => {
+    return errorCodes.map((item) => ({
+      id: item.id.toString(),
+      title: `${item.code} - ${item.description}`,
+    }));
+  }, [errorCodes]);
+  
+  const handleInputChange = (field: keyof typeof form, value: string | number) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchCameraAsync({
+  const pickImage = async (useCamera: boolean) => {
+    const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+    const result = await action({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
       quality: 0.7,
-      base64: false,
     });
 
-    if (!result.canceled) {
-      setFormData({ ...formData, photos: [...formData.photos, result.assets[0].uri] });
-      setErrors(prev => ({ ...prev, photos: "" }));
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const newPhoto: RNFile = {
+        uri: asset.uri,
+        name: asset.fileName || `photo_${Date.now()}.jpg`,
+        type: asset.mimeType || 'image/jpeg',
+      };
+      setPhotos((prev) => [...prev, newPhoto]);
     }
   };
 
-  const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
+  const removePhoto = (uri: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.uri !== uri));
   };
 
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm()) return;
-
+  const handleSubmit = async () => {
+    if (!form.Code || !form.Name || !form.ProductError || !selectedErrorCode) {
+      Alert.alert('Eksik Bilgi', 'Lütfen tüm zorunlu alanları doldurun.');
+      return;
+    }
+    
     setIsSubmitting(true);
-    try {
-      // Offline kontrolü
-      const queued = await enqueueReportIfOffline(formData);
+    
+    const finalFormData: CreateFormPayload = {
+      ...form,
+      ErrorCodeId: selectedErrorCode.id,
+      LineId: 1, 
+      Photos: photos.map(p => p.uri),
+    };
 
-      if (queued) {
-        Alert.alert(
-          "Çevrimdışı",
-          "Rapor internet bağlantısı sağlandığında otomatik gönderilecek."
-        );
-        onCancel();
-      } else {
-        // Online ise direkt API'ye fotoğraflarla gönder
-        await createFormWithPhotos(formData, formData.photos);
-        Alert.alert("Başarılı", "Rapor başarıyla gönderildi.");
-        onCancel();
-      }
+    try {
+      await FormService.submitForm(finalFormData, photos);
+      
+      const successMessage = isConnected
+        ? 'Rapor başarıyla gönderildi!'
+        : 'İnternet bağlantısı yok. Rapor kaydedildi ve bağlantı kurulduğunda gönderilecek.';
+      
+      Alert.alert('Başarılı', successMessage);
+      
+      onSubmitSuccess();
+      resetForm();
     } catch (error) {
-      Alert.alert("Hata", "Rapor gönderilirken bir hata oluştu");
-      console.error(error);
+      console.error('Form gönderme hatası:', error);
+      Alert.alert('Hata', 'Rapor gönderilirken bir sorun oluştu.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, onCancel]);
+  };
 
-  const updateField = (field: keyof ReportFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
+  const resetForm = () => {
+    setForm({ Code: '', Type: 'Üretim', Name: '', ProductError: '', Quantity: 1 });
+    setSelectedErrorCode(null);
+    setPhotos([]);
+    onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Yeni Rapor
-          </Text>
-          <TouchableOpacity onPress={onCancel} style={styles.closeButton}>
-            <X color={colors.textSecondary} size={24} />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Barkod */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <Package color={colors.textSecondary} size={18} />
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Barkod *
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={resetForm}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <KeyboardAwareScrollView>
+          <View style={{ padding: 20 }}>
+            {/* ... Diğer tüm tasarım kodların burada ... */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text }}>
+                Yeni Hata Raporu
               </Text>
-            </View>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: errors.barcode ? colors.error : colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Barkod girin"
-              placeholderTextColor={colors.textMuted}
-              value={formData.barcode}
-              onChangeText={(text) => updateField("barcode", text)}
-            />
-            {errors.barcode && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.barcode}
-              </Text>
-            )}
-          </View>
-
-          {/* Ürün Tipi */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <Package color={colors.textSecondary} size={18} />
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Ürün Tipi *
-              </Text>
-            </View>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: errors.productType ? colors.error : colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Ürün tipini girin"
-              placeholderTextColor={colors.textMuted}
-              value={formData.productType}
-              onChangeText={(text) => updateField("productType", text)}
-            />
-            {errors.productType && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.productType}
-              </Text>
-            )}
-          </View>
-
-          {/* Hata Kodu */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <AlertTriangle color={colors.textSecondary} size={18} />
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Hata Kodu *
-              </Text>
-            </View>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: errors.errorCode ? colors.error : colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Hata kodunu girin"
-              placeholderTextColor={colors.textMuted}
-              value={formData.errorCode?.code || ""}
-              onChangeText={(text) => updateField("errorCode", { id: Date.now(), code: text })}
-            />
-            {errors.errorCode && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.errorCode}
-              </Text>
-            )}
-          </View>
-
-          {/* Not */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <FileText color={colors.textSecondary} size={18} />
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Not
-              </Text>
-            </View>
-            <TextInput
-              style={[
-                styles.textArea,
-                { 
-                  backgroundColor: colors.surfaceSecondary,
-                  borderColor: colors.border,
-                  color: colors.text
-                }
-              ]}
-              placeholder="Ek açıklama (isteğe bağlı)"
-              placeholderTextColor={colors.textMuted}
-              value={formData.note}
-              onChangeText={(text) => updateField("note", text)}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          {/* Fotoğraflar */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <Camera color={colors.textSecondary} size={18} />
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Fotoğraflar *
-              </Text>
+              <TouchableOpacity onPress={resetForm}>
+                <X size={28} color={colors.text} />
+              </TouchableOpacity>
             </View>
             
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
-              {formData.photos.map((uri, index) => (
-                <View key={index} style={styles.photoItem}>
-                  <Image source={{ uri }} style={styles.photo} />
-                  <TouchableOpacity
-                    style={[styles.removePhoto, { backgroundColor: colors.error }]}
-                    onPress={() => removePhoto(index)}
-                  >
-                    <X color="white" size={16} />
-                  </TouchableOpacity>
-                </View>
+            <Label style={{ color: colors.text, marginBottom: 5 }}>Ürün Kodu</Label>
+            <Input value={form.Code} onChangeText={(val) => handleInputChange('Code', val)} placeholder="Ürün kodunu girin" />
+
+            <Label style={{ color: colors.text, marginTop: 15, marginBottom: 5 }}>Ürün Adı</Label>
+            <Input value={form.Name} onChangeText={(val) => handleInputChange('Name', val)} placeholder="Ürün adını girin" />
+            
+            <Label style={{ color: colors.text, marginTop: 15, marginBottom: 5 }}>Hatalı Ürün</Label>
+            <Input value={form.ProductError} onChangeText={(val) => handleInputChange('ProductError', val)} placeholder="Hatalı olan ürünü belirtin" />
+
+            <Label style={{ color: colors.text, marginTop: 15, marginBottom: 5 }}>Hata Kodu</Label>
+            <AutocompleteDropdown
+              loading={loadingErrorCodes}
+              clearOnFocus={false}
+              closeOnBlur={true}
+              closeOnSubmit={false}
+              onSelectItem={(item) => {
+                if (item) {
+                  const foundErrorCode = errorCodes.find(ec => ec.id.toString() === item.id);
+                  setSelectedErrorCode(foundErrorCode || null);
+                } else {
+                  setSelectedErrorCode(null);
+                }
+              }}
+              dataSet={errorCodeDataSet}
+              textInputProps={{
+                placeholder: 'Hata kodu veya açıklamasıyla arayın...',
+                autoCorrect: false,
+                autoCapitalize: 'none',
+                style: {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  paddingLeft: 18,
+                },
+              }}
+              suggestionsListContainerStyle={{ backgroundColor: colors.surface, }}
+              renderItem={(item) => (
+                <Text style={{ color: colors.text, padding: 15 }}>{item.title}</Text>
+              )}
+            />
+
+            <Label style={{ color: colors.text, marginTop: 15, marginBottom: 5 }}>Adet</Label>
+            <Input value={String(form.Quantity)} onChangeText={(val) => handleInputChange('Quantity', parseInt(val) || 1)} keyboardType="numeric" />
+
+            <Label style={{ color: colors.text, marginTop: 20, marginBottom: 10 }}>Fotoğraflar</Label>
+            <ScrollView horizontal>
+              {photos.map((photo) => (
+                <TouchableOpacity key={photo.uri} onLongPress={() => removePhoto(photo.uri)} onPress={() => setPreviewPhoto(photo)}>
+                  <Image source={{ uri: photo.uri }} style={{ width: 80, height: 80, borderRadius: 8, marginRight: 10 }} />
+                </TouchableOpacity>
               ))}
-              
               <TouchableOpacity
-                style={[
-                  styles.addPhotoButton,
-                  { 
-                    backgroundColor: colors.surfaceSecondary,
-                    borderColor: colors.border
-                  }
-                ]}
-                onPress={pickImage}
+                onPress={() => Alert.alert('Fotoğraf Ekle', '', [{ text: 'Kamera', onPress: () => pickImage(true) }, { text: 'Galeri', onPress: () => pickImage(false) }, { text: 'İptal', style: 'cancel' }])}
+                style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }}
               >
-                <Camera color={colors.textMuted} size={24} />
-                <Text style={[styles.addPhotoText, { color: colors.textMuted }]}>
-                  Fotoğraf Ekle
-                </Text>
+                <PlusCircle size={32} color={colors.primary} />
               </TouchableOpacity>
             </ScrollView>
-            
-            {errors.photos && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.photos}
-              </Text>
-            )}
-          </View>
-        </ScrollView>
 
-        {/* Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton, { backgroundColor: colors.surfaceSecondary }]}
-            onPress={onCancel}
-            disabled={isSubmitting}
-          >
-            <Text style={[styles.buttonText, { color: colors.textSecondary }]}>
-              İptal
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.button,
-              styles.submitButton,
-              { 
-                backgroundColor: isSubmitting ? colors.textMuted : colors.primary,
-                opacity: isSubmitting ? 0.7 : 1
-              }
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Check color="white" size={20} />
-            )}
-            <Text style={[styles.buttonText, { color: "white", marginLeft: 8 }]}>
-              {isSubmitting ? "Gönderiliyor..." : "Gönder"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <Button
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={{ marginTop: 30, backgroundColor: colors.primary, height: 50, justifyContent: 'center' }}
+            >
+              {isSubmitting ? <ActivityIndicator color="white" /> : <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Kaydet</Text>}
+            </Button>
+          </View>
+        </KeyboardAwareScrollView>
+        
+        {/* DÜZELTİLMİŞ NİHAİ SATIR */}
+        {previewPhoto && <PhotoPreviewModal uri={previewPhoto.uri} onClose={() => setPreviewPhoto(null)} />}
+        
+      </SafeAreaView>
     </Modal>
   );
 }
-
-const { width } = Dimensions.get('window');
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  fieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    textAlignVertical: 'top',
-    minHeight: 80,
-  },
-  photosContainer: {
-    marginTop: 8,
-  },
-  photoItem: {
-    marginRight: 12,
-    position: 'relative',
-  },
-  photo: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-  },
-  removePhoto: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addPhotoButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addPhotoText: {
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 20,
-    borderTopWidth: 1,
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  cancelButton: {
-    // backgroundColor handled by style prop
-  },
-  submitButton: {
-    // backgroundColor handled by style prop
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

@@ -7,12 +7,11 @@ export default function SignInScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAwareScrollView
-        enableOnAndroid
-        extraScrollHeight={20} // input odaklanınca biraz boşluk bırakır
-        keyboardOpeningTime={0}
         contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
       >
-        <View className="flex-1 items-center justify-center p-4 py-8 sm:py-4 sm:p-6">
+        <View className="flex-1 items-center justify-center p-4">
           <View className="w-full max-w-sm">
             <SignInForm />
           </View>

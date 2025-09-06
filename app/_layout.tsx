@@ -4,13 +4,15 @@ import { DarkTheme, DefaultTheme, Theme, ThemeProvider } from '@react-navigation
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
-import { Appearance, Platform } from 'react-native';
+import { ActivityIndicator, Appearance, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NAV_THEME } from '~/lib/constants';
-import { initAuthFromStorage } from '~/services/auth';
 import { useColorScheme } from '~/lib/useColorScheme';
 import { PortalHost } from '@rn-primitives/portal';
 import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
+import { AuthProvider, useAuth } from '~/contexts/AuthContext';
+import { NetworkProvider } from '~/components/NetworkProvider';
+import { useTheme } from '~/hooks/useTheme'; // Temanı kullanmak için hook'u import et
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,
@@ -23,37 +25,45 @@ const DARK_THEME: Theme = {
 
 export { ErrorBoundary } from 'expo-router';
 
-const usePlatformSpecificSetup = Platform.select({
-  web: useSetWebBackgroundClassName,
-  android: useSetAndroidNavigationBar,
-  default: noop,
-});
-
 export default function RootLayout() {
-  usePlatformSpecificSetup();
+  return (
+    <AuthProvider>
+      <Layout />
+    </AuthProvider>
+  );
+}
+
+
+function Layout() {
   const { isDarkColorScheme } = useColorScheme();
-  React.useEffect(() => {
-    // Initialize auth header from stored token on app start
-    initAuthFromStorage();
-  }, []);
+  const { isLoading } = useAuth();
+  const { colors } = useTheme(); // Mevcut temanın renklerini al
+
+ 
+  usePlatformSpecificSetup();
+
+  // Kimlik doğrulama durumu kontrol edilirken, temanla uyumlu bir yükleme ekranı göster
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
       <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-        <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-        
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Ana ekran - index.tsx */}
-          <Stack.Screen name="index" options={{ headerShown: false }} />
+        <NetworkProvider>
+          <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
           
-          {/* Auth grubu */}
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          
-          {/* Tabs grubu */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
 
-        <PortalHost />
+          <PortalHost />
+        </NetworkProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
@@ -62,16 +72,12 @@ export default function RootLayout() {
 const useIsomorphicLayoutEffect =
   Platform.OS === 'web' && typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
-function useSetWebBackgroundClassName() {
+function usePlatformSpecificSetup() {
   useIsomorphicLayoutEffect(() => {
-    document.documentElement.classList.add('bg-background');
+    if (Platform.OS === 'web') {
+      document.documentElement.classList.add('bg-background');
+    } else if (Platform.OS === 'android') {
+      setAndroidNavigationBar(Appearance.getColorScheme() ?? 'light');
+    }
   }, []);
 }
-
-function useSetAndroidNavigationBar() {
-  React.useLayoutEffect(() => {
-    setAndroidNavigationBar(Appearance.getColorScheme() ?? 'light');
-  }, []);
-}
-
-function noop() {}

@@ -6,6 +6,24 @@ import { currentUser, mockUsers, mockErrorCodes, addUser, addErrorCode, User, Er
 import { getUserRole, getUserName, getUserLine } from '~/services/storage';
 import LogoLight from '~/sersim-light.svg';
 import LogoDark from '~/sersim-dark.svg';
+import { useAuth } from '~/contexts/AuthContext';
+
+
+
+
+
+
+
+// handle sign in butona eklenecek 06.09.2025
+
+
+
+
+
+
+
+
+
 
 const bandOptions = [
   'Pişirici 1', 'Pişirici 2', 'Pişirici 3', 'Pişirici 4', 'Pişirici 5',
