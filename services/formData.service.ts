@@ -1,7 +1,7 @@
 import api from './api';
-import { CreateFormPayload, RNFile, Form } from '~/types'; // Projendeki doğru tipleri import et
+import { CreateFormPayload, RNFile, Form } from '~/types/index'; 
 import NetInfo from '@react-native-community/netinfo';
-import { addFormToQueue } from '~/lib/offlineQueue'; // lib klasöründeki offlineQueue'yu kullanıyoruz
+import { addFormToQueue } from '~/services/offlineQueue'; 
 
 /**
  * Bu fonksiyon, form verisini ve fotoğrafları onlineken doğrudan API'ye gönderir.
